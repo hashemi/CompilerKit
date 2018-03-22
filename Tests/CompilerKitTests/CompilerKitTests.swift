@@ -12,6 +12,7 @@ final class CompilerKitTests: XCTestCase {
                 NFA.Edge(from: 1, to: 2, scalar: "a"),
                 NFA.Edge(from: 2, to: 3, scalar: "b")
             ],
+            initial: 0,
             accepting: 3)
         XCTAssertTrue(nfa.match("aaab"))
         XCTAssertFalse(nfa.match("aaa"))
