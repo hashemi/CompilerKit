@@ -10,23 +10,33 @@ struct NFA {
     let initial: Int
     let accepting: Int
     
+    func epsilonClosure(from states: Set<Int>) -> Set<Int> {
+        var newStates = states
+        var worklist = Array(states)
+        while let state = worklist.popLast() {
+            let newReachableStates = edges
+                .filter { $0.from == state && !newStates.contains($0.to) && $0.scalar == nil }
+                .map { $0.to }
+            worklist.append(contentsOf: newReachableStates)
+            newStates.formUnion(newReachableStates)
+        }
+        return newStates
+    }
+    
+    func reachable(from states: Set<Int>, via scalar: UnicodeScalar) -> Set<Int> {
+        return Set(edges
+            .filter { states.contains($0.from) && $0.scalar == scalar }
+            .map { $0.to })
+    }
+    
     func match(_ s: String) -> Bool {
         var states: Set<Int> = [initial]
         for scalar in s.unicodeScalars {
             // add all states reachable by epsilon transitions
-            var exploreNext: [Int] = Array(states)
-            while let explore = exploreNext.popLast() {
-                let newReachableStates = edges
-                        .filter { $0.from == explore && !states.contains($0.to) && $0.scalar == nil }
-                        .map { $0.to }
-                exploreNext.append(contentsOf: newReachableStates)
-                states.formUnion(newReachableStates)
-            }
+            states = epsilonClosure(from: states)
             
             // new set of states as allowed by current scalar in string
-            states = Set(edges
-                .filter { states.contains($0.from) && $0.scalar == scalar }
-                .map { $0.to })
+            states = reachable(from: states, via: scalar)
         }
         return states.contains(accepting)
     }
