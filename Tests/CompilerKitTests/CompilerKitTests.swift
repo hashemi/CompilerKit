@@ -86,5 +86,6 @@ final class CompilerKitTests: XCTestCase {
         ("testNFA", testNFA),
         ("testRegularExpression", testRegularExpression),
         ("testDFA", testDFA),
+        ("testRegularExpressionToDFAMatch", testRegularExpressionToDFAMatch),
     ]
 }
