@@ -24,7 +24,7 @@ final class CompilerKitTests: XCTestCase {
     
     func testRegularExpression() {
         // a*ab - should match ab, aab, aaab, etc
-        let re = RegularExpression.concatenation(.closure(.scalar("a")), .concatenation(.scalar("a"), .scalar("b")))
+        let re: RegularExpression = "a"* + ("a" + "b")
         let derivedNfa = re.nfa
         XCTAssertTrue(derivedNfa.match("aaab"))
         XCTAssertFalse(derivedNfa.match("aaa"))
