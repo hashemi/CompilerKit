@@ -81,9 +81,11 @@ extension NFA {
         let qPositions = Dictionary<Set<Int>, Int>(uniqueKeysWithValues: Q.enumerated().map { ($0.element, $0.offset) })
 
         let vertices = Q.count
-        let edges: [DFA.Edge] = T.map { t in
-            DFA.Edge(from: qPositions[t.from]!, to: qPositions[t.to]!, scalar: t.scalar)
-        }
+        
+        let edges = Dictionary(uniqueKeysWithValues: T.map { t in
+            (DFA.Edge(from: qPositions[t.from]!, scalar: t.scalar), qPositions[t.to]!)
+        })
+        
         let initial: Set<Int> = [0] // this is always zero since we always add q0 first to Q
         let accepting = Set(Q.enumerated().filter { $0.element.contains(self.accepting) }.map { $0.offset })
         

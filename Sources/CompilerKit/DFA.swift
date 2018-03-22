@@ -1,12 +1,15 @@
 struct DFA {
-    struct Edge {
+    struct Edge: Hashable {
         let from: Int
-        let to: Int
         let scalar: UnicodeScalar
     }
     
+    var alphabet: Set<UnicodeScalar> {
+        return Set(edges.keys.map { $0.scalar })
+    }
+    
     let vertices: Int
-    let edges: [Edge]
+    let edges: [Edge: Int]
     let initial: Set<Int>
     let accepting: Set<Int>
 
@@ -14,9 +17,7 @@ struct DFA {
         var states: Set<Int> = initial
         for scalar in s.unicodeScalars {
             // new set of states as allowed by current scalar in string
-            states = Set(edges
-                .filter { states.contains($0.from) && $0.scalar == scalar }
-                .map { $0.to })
+            states = Set(states.compactMap { edges[Edge(from: $0, scalar: scalar)] })
         }
         return !states.isDisjoint(with: accepting)
     }

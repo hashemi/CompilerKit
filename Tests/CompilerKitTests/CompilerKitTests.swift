@@ -38,9 +38,9 @@ final class CompilerKitTests: XCTestCase {
         let dfa = DFA(
             vertices: 2,
             edges: [
-                DFA.Edge(from: 0, to: 1, scalar: "a"),
-                DFA.Edge(from: 1, to: 1, scalar: "b"),
-                DFA.Edge(from: 1, to: 1, scalar: "c")
+                DFA.Edge(from: 0, scalar: "a"): 1,
+                DFA.Edge(from: 1, scalar: "b"): 1,
+                DFA.Edge(from: 1, scalar: "c"): 1
             ],
             initial: [0],
             accepting: [1]
