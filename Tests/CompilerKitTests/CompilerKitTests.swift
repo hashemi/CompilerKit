@@ -32,10 +32,39 @@ final class CompilerKitTests: XCTestCase {
         XCTAssertFalse(derivedNfa.match("b"))
         XCTAssertFalse(derivedNfa.match("bbbbab"))
     }
+    
+    func testDFA() {
+        // a(b|c)* - should match a, ab, ac, abc, abbbb, acccc, abbccbcbbc, etc
+        let dfa = DFA(
+            vertices: 2,
+            edges: [
+                DFA.Edge(from: 0, to: 1, scalar: "a"),
+                DFA.Edge(from: 1, to: 1, scalar: "b"),
+                DFA.Edge(from: 1, to: 1, scalar: "c")
+            ],
+            initial: [0],
+            accepting: [1]
+        )
+        
+        XCTAssertTrue(dfa.match("a"))
+        XCTAssertTrue(dfa.match("ab"))
+        XCTAssertTrue(dfa.match("ac"))
+        XCTAssertTrue(dfa.match("abc"))
+        XCTAssertTrue(dfa.match("acb"))
+        XCTAssertTrue(dfa.match("abbbb"))
+        XCTAssertTrue(dfa.match("acccc"))
+        XCTAssertTrue(dfa.match("abbccbbccbc"))
+
+        XCTAssertFalse(dfa.match("aa"))
+        XCTAssertFalse(dfa.match("aba"))
+        XCTAssertFalse(dfa.match("abac"))
+        XCTAssertFalse(dfa.match("abbccbbccbca"))
+    }
 
 
     static var allTests = [
         ("testNFA", testNFA),
         ("testRegularExpression", testRegularExpression),
+        ("testDFA", testDFA),
     ]
 }
