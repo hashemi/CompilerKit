@@ -56,7 +56,7 @@ extension RegularExpression {
             // with an epsilon edge and a common accepting state from each nfa's
             // accepting state
             let nfa1offset = nfa1.offset(by: 1)
-            let nfa2offset = nfa2.offset(by: nfa1.vertices)
+            let nfa2offset = nfa2.offset(by: nfa1.vertices + 1)
             
             let vertices = nfa2offset.vertices + 1
             let initial = 0
