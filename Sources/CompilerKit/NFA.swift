@@ -8,7 +8,7 @@ struct NFA {
     let vertices: Int
     let edges: [Edge]
     let s0: Int = 0
-    let accepting: Set<Int>
+    let accepting: Int
     
     func match(_ s: String) -> Bool {
         var states: Set<Int> = [s0]
@@ -24,7 +24,7 @@ struct NFA {
                 .filter { states.contains($0.from) && $0.scalar == scalar }
                 .map { $0.to })
         }
-        return !states.isDisjoint(with: accepting)
+        return states.contains(accepting)
     }
 }
 
