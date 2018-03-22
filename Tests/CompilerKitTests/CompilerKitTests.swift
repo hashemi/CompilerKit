@@ -61,6 +61,25 @@ final class CompilerKitTests: XCTestCase {
         XCTAssertFalse(dfa.match("abbccbbccbca"))
     }
 
+    func testRegularExpressionToDFAMatch() {
+        // a(b|c)* - should match a, ab, ac, abc, abbbb, acccc, abbccbcbbc, etc
+        let re: RegularExpression = "a" + ("b" | "c")*
+        let dfa = re.nfa.dfa
+        
+        XCTAssertTrue(dfa.match("a"))
+        XCTAssertTrue(dfa.match("ab"))
+        XCTAssertTrue(dfa.match("ac"))
+        XCTAssertTrue(dfa.match("abc"))
+        XCTAssertTrue(dfa.match("acb"))
+        XCTAssertTrue(dfa.match("abbbb"))
+        XCTAssertTrue(dfa.match("acccc"))
+        XCTAssertTrue(dfa.match("abbccbbccbc"))
+        
+        XCTAssertFalse(dfa.match("aa"))
+        XCTAssertFalse(dfa.match("aba"))
+        XCTAssertFalse(dfa.match("abac"))
+        XCTAssertFalse(dfa.match("abbccbbccbca"))
+    }
 
     static var allTests = [
         ("testNFA", testNFA),

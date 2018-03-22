@@ -10,6 +10,12 @@ struct NFA {
     let initial: Int
     let accepting: Int
     
+    var alphabet: Set<UnicodeScalar> {
+        return edges.reduce(into: Set<UnicodeScalar>(), { set, edge in
+            if let scalar = edge.scalar { set.insert(scalar) }
+        })
+    }
+    
     func epsilonClosure(from states: Set<Int>) -> Set<Int> {
         var newStates = states
         var worklist = Array(states)
@@ -51,3 +57,35 @@ struct NFA {
     }
 }
 
+// DFA from NFA (subset construction)
+extension NFA {
+    var dfa: DFA {
+        let alphabet = self.alphabet
+        let q0 = epsilonClosure(from: [self.initial])
+        var Q: [Set<Int>] = [q0]
+        var worklist = [q0]
+        var T: [(from: Set<Int>, to: Set<Int>, scalar: UnicodeScalar)] = []
+        while let q = worklist.popLast() {
+            for scalar in alphabet {
+                let t = epsilonClosure(from: reachable(from: q, via: scalar))
+                T.append((from: q, to: t, scalar: scalar))
+                if !Q.contains(t) {
+                    Q.append(t)
+                    worklist.append(t)
+                }
+            }
+        }
+        
+        // create a dictionary that maps sets to their positions in Q
+        let qPositions = Dictionary<Set<Int>, Int>(uniqueKeysWithValues: Q.enumerated().map { ($0.element, $0.offset) })
+
+        let vertices = Q.count
+        let edges: [DFA.Edge] = T.map { t in
+            DFA.Edge(from: qPositions[t.from]!, to: qPositions[t.to]!, scalar: t.scalar)
+        }
+        let initial: Set<Int> = [0] // this is always zero since we always add q0 first to Q
+        let accepting = Set(Q.enumerated().filter { $0.element.contains(self.accepting) }.map { $0.offset })
+        
+        return DFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting)
+    }
+}
