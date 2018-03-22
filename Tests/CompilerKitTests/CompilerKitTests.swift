@@ -20,9 +20,22 @@ final class CompilerKitTests: XCTestCase {
         XCTAssertFalse(nfa.match("b"))
         XCTAssertFalse(nfa.match("bbbbab"))
     }
+    
+    
+    func testRegularExpression() {
+        // a*ab - should match ab, aab, aaab, etc
+        let re = RegularExpression.concatenation(.closure(.scalar("a")), .concatenation(.scalar("a"), .scalar("b")))
+        let derivedNfa = re.nfa
+        XCTAssertTrue(derivedNfa.match("aaab"))
+        XCTAssertFalse(derivedNfa.match("aaa"))
+        XCTAssertTrue(derivedNfa.match("ab"))
+        XCTAssertFalse(derivedNfa.match("b"))
+        XCTAssertFalse(derivedNfa.match("bbbbab"))
+    }
 
 
     static var allTests = [
         ("testNFA", testNFA),
+        ("testRegularExpression", testRegularExpression),
     ]
 }

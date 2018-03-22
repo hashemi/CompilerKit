@@ -30,5 +30,14 @@ struct NFA {
         }
         return states.contains(accepting)
     }
+    
+    func offset(by offset: Int) -> NFA {
+        return NFA(
+            vertices: vertices + offset,
+            edges: edges.map { Edge(from: $0.from + offset, to: $0.to + offset, scalar: $0.scalar) },
+            initial: initial + offset,
+            accepting: accepting + offset
+        )
+    }
 }
 
