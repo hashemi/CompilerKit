@@ -68,6 +68,7 @@ extension NFA {
         while let q = worklist.popLast() {
             for scalar in alphabet {
                 let t = epsilonClosure(from: reachable(from: q, via: scalar))
+                if t.isEmpty { continue }
                 T.append((from: q, to: t, scalar: scalar))
                 if !Q.contains(t) {
                     Q.append(t)

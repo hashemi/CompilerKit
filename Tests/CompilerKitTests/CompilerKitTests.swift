@@ -79,6 +79,7 @@ final class CompilerKitTests: XCTestCase {
         XCTAssertFalse(dfa.match("aba"))
         XCTAssertFalse(dfa.match("abac"))
         XCTAssertFalse(dfa.match("abbccbbccbca"))
+        XCTAssertFalse(dfa.match("cbcab"))
     }
 
     static var allTests = [
