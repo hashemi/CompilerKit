@@ -34,12 +34,13 @@ extension DFA {
         var partition = (0..<self.vertices).map { self.accepting.contains($0) ? 1 : 0 }
         var partitionCount = 2
         
-        func split(p: Int) {
+        func split() {
             for scalar in alphabet {
                 // -1: not set yet, -2: no path exists from this partition for this scalar
-                var partitionTarget = -1
-                var splitting = false
-                for x in 0..<self.vertices where partition[x] == p {
+                var partitionTarget = Array(repeating: -1, count: partitionCount)
+                var newPartition = Array(repeating: -1, count: partitionCount)
+                for x in 0..<self.vertices {
+                    let p = partition[x]
                     let target: Int
                     if let nextState = self.edges[Edge(from: x, scalar: scalar)] {
                         target = partition[nextState]
@@ -47,29 +48,28 @@ extension DFA {
                         target = -2
                     }
                     
-                    if partitionTarget == -1 {
+                    if partitionTarget[p] == -1 {
                         // first item in partition
-                        partitionTarget = target
+                        partitionTarget[p] = target
                         continue
                     } else {
-                        if partitionTarget != target {
-                            if !splitting {
-                                splitting = true
+                        if partitionTarget[p] != target {
+                            if newPartition[p] == -1 {
+                                newPartition[p] = partitionCount
                                 partitionCount += 1
                             }
                             
-                            partition[x] = partitionCount - 1
+                            partition[x] = newPartition[p]
                         }
                     }
                 }
-                if splitting { return }
             }
         }
         
         var lastPartitionCount = 0
         while partitionCount != lastPartitionCount {
             lastPartitionCount = partitionCount
-            for p in 0..<partitionCount { split(p: p) }
+            split()
         }
         
         let initial = partition[self.initial]
