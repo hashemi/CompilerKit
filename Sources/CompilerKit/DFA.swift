@@ -10,16 +10,18 @@ struct DFA {
     
     let vertices: Int
     let edges: [Edge: Int]
-    let initial: Set<Int>
+    let initial: Int
     let accepting: Set<Int>
-
+    
     func match(_ s: String) -> Bool {
-        var states: Set<Int> = initial
+        var state = initial
         for scalar in s.unicodeScalars {
-            // new set of states as allowed by current scalar in string
-            states = Set(states.compactMap { edges[Edge(from: $0, scalar: scalar)] })
+            guard let newState = edges[Edge(from: state, scalar: scalar)] else {
+                return false
+            }
+            state = newState
         }
-        return !states.isDisjoint(with: accepting)
+        return accepting.contains(state)
     }
 }
 
@@ -70,7 +72,7 @@ extension DFA {
             for p in 0..<partitionCount { split(p: p) }
         }
         
-        let initial = Set(self.initial.map { partition[$0] })
+        let initial = partition[self.initial]
         let accepting = Set(self.accepting.map { partition[$0] })
         let edges = Dictionary(
             self.edges.map { edge, target in

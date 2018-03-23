@@ -86,7 +86,7 @@ extension NFA {
             (DFA.Edge(from: qPositions[t.from]!, scalar: t.scalar), qPositions[t.to]!)
         })
         
-        let initial: Set<Int> = [0] // this is always zero since we always add q0 first to Q
+        let initial = 0 // this is always zero since we always add q0 first to Q
         let accepting = Set(Q.enumerated().filter { $0.element.contains(self.accepting) }.map { $0.offset })
         
         return DFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting)

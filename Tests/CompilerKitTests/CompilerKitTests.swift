@@ -42,7 +42,7 @@ final class CompilerKitTests: XCTestCase {
                 DFA.Edge(from: 1, scalar: "b"): 1,
                 DFA.Edge(from: 1, scalar: "c"): 1
             ],
-            initial: [0],
+            initial: 0,
             accepting: [1]
         )
         
