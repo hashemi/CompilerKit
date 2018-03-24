@@ -28,10 +28,10 @@ extension RegularExpression: ExpressibleByUnicodeScalarLiteral {
 
 // Derive an NFA from a regular expression (Thompson's Construction)
 extension RegularExpression {
-    var nfa: NFA {
+    var nfa: NFA<Bool> {
         switch self {
         case .scalar(let scalar):
-            return NFA(vertices: 2, edges: [NFA.Edge(from: 0, to: 1, scalar: scalar)], initial: 0, accepting: 1)
+            return NFA(vertices: 2, edges: [NFA.Edge(from: 0, to: 1, scalar: scalar)], initial: 0, accepting: 1, acceptingValue: true, nonAcceptingValue: false)
         
         case .concatenation(let re1, let re2):
             let nfa1 = re1.nfa
@@ -46,7 +46,9 @@ extension RegularExpression {
                 vertices: nfa2offset.vertices,
                 edges: edges,
                 initial: nfa1.initial,
-                accepting: nfa2offset.accepting)
+                accepting: nfa2offset.accepting,
+                acceptingValue: true,
+                nonAcceptingValue: false)
         
         case .alternation(let re1, let re2):
             let nfa1 = re1.nfa
@@ -70,7 +72,7 @@ extension RegularExpression {
                     NFA.Edge(from: nfa1offset.accepting, to: accepting, scalar: nil),
                     NFA.Edge(from: nfa2offset.accepting, to: accepting, scalar: nil)
                 ]
-            return NFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting)
+            return NFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting, acceptingValue: true, nonAcceptingValue: false)
             
         case .closure(let re):
             let nfa = re.nfa
@@ -90,7 +92,7 @@ extension RegularExpression {
                     NFA.Edge(from: offset.accepting, to: offset.initial, scalar: nil),
                     NFA.Edge(from: offset.accepting, to: accepting, scalar: nil)
                 ]
-            return NFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting)
+            return NFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting, acceptingValue: true, nonAcceptingValue: false)
         }
     }
 }

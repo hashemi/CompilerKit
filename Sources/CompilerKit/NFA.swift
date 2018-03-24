@@ -1,4 +1,4 @@
-struct NFA {
+struct NFA<T> {
     struct Edge {
         let from: Int
         let to: Int
@@ -9,6 +9,8 @@ struct NFA {
     let edges: [Edge]
     let initial: Int
     let accepting: Int
+    let acceptingValue: T
+    let nonAcceptingValue: T
     
     var alphabet: Set<UnicodeScalar> {
         return edges.reduce(into: Set<UnicodeScalar>(), { set, edge in
@@ -35,7 +37,7 @@ struct NFA {
             .map { $0.to })
     }
     
-    func match(_ s: String) -> Bool {
+    func match(_ s: String) -> T {
         var states: Set<Int> = [initial]
         for scalar in s.unicodeScalars {
             // add all states reachable by epsilon transitions
@@ -44,7 +46,7 @@ struct NFA {
             // new set of states as allowed by current scalar in string
             states = reachable(from: states, via: scalar)
         }
-        return states.contains(accepting)
+        return states.contains(accepting) ? acceptingValue : nonAcceptingValue
     }
     
     func offset(by offset: Int) -> NFA {
@@ -52,14 +54,16 @@ struct NFA {
             vertices: vertices + offset,
             edges: edges.map { Edge(from: $0.from + offset, to: $0.to + offset, scalar: $0.scalar) },
             initial: initial + offset,
-            accepting: accepting + offset
+            accepting: accepting + offset,
+            acceptingValue: acceptingValue,
+            nonAcceptingValue: nonAcceptingValue
         )
     }
 }
 
 // DFA from NFA (subset construction)
 extension NFA {
-    var dfa: DFA<Bool> {
+    var dfa: DFA<T> {
         let alphabet = self.alphabet
         let q0 = epsilonClosure(from: [self.initial])
         var Q: [Set<Int>] = [q0]
@@ -83,12 +87,12 @@ extension NFA {
         let vertices = Q.count
         
         let edges = Dictionary(uniqueKeysWithValues: T.map { t in
-            (DFA<Bool>.Edge(from: qPositions[t.from]!, scalar: t.scalar), qPositions[t.to]!)
+            (DFA<T>.Edge(from: qPositions[t.from]!, scalar: t.scalar), qPositions[t.to]!)
         })
         
         let initial = 0 // this is always zero since we always add q0 first to Q
-        let accepting = Dictionary(uniqueKeysWithValues: Q.enumerated().filter { $0.element.contains(self.accepting) }.map { ($0.offset, true) })
+        let accepting = Dictionary(uniqueKeysWithValues: Q.enumerated().filter { $0.element.contains(self.accepting) }.map { ($0.offset, self.acceptingValue) })
         
-        return DFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting, nonAcceptingValue: false)
+        return DFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting, nonAcceptingValue: self.nonAcceptingValue)
     }
 }
