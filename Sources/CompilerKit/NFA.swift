@@ -13,6 +13,36 @@ struct NFA<T> {
     let accepting: [Int: T]
     let nonAcceptingValue: T
     
+    private let epsilonClosures: [Bitset]
+    
+    init(vertices: Int, edges: [Edge: [Int]], epsilonTransitions: [Int: [Int]], initial: Int, accepting: [Int: T], nonAcceptingValue: T) {
+        self.vertices = vertices
+        self.edges = edges
+        self.epsilonTransitions = epsilonTransitions
+        self.initial = initial
+        self.accepting = accepting
+        self.nonAcceptingValue = nonAcceptingValue
+        
+        var epsilonClosures: [Bitset] = []
+        
+        for v in 0..<vertices {
+            var marked = Bitset()
+            
+            func dfs(_ s: Int) {
+                marked.add(s)
+                for w in epsilonTransitions[s, default: []] {
+                    if !marked.contains(w) { dfs(w) }
+                }
+            }
+            
+            dfs(v)
+            
+            epsilonClosures.append(marked)
+        }
+        
+        self.epsilonClosures = epsilonClosures
+    }
+    
     var alphabet: Set<UnicodeScalar> {
         return edges.keys.reduce(into: Set<UnicodeScalar>(), { set, edge in
             set.insert(edge.scalar)
@@ -20,20 +50,11 @@ struct NFA<T> {
     }
     
     func epsilonClosure(from states: Bitset) -> Bitset {
-        var marked = Bitset()
-        
-        func dfs(_ s: Int) {
-            marked.add(s)
-            for w in epsilonTransitions[s, default: []] {
-                if !marked.contains(w) { dfs(w) }
-            }
+        let all = Bitset()
+        for v in states {
+            all.union(epsilonClosures[v])
         }
-        
-        for s in states {
-            if !marked.contains(s) { dfs(s) }
-        }
-        
-        return marked
+        return all
     }
     
     func reachable(from states: Bitset, via scalar: UnicodeScalar) -> Bitset {
