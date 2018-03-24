@@ -7,11 +7,11 @@ final class CompilerKitTests: XCTestCase {
         let nfa = NFA(
             vertices: 4,
             edges: [
-                NFA.Edge(from: 0, to: 0, scalar: "a"),
-                NFA.Edge(from: 0, to: 1, scalar: nil),
-                NFA.Edge(from: 1, to: 2, scalar: "a"),
-                NFA.Edge(from: 2, to: 3, scalar: "b")
+                NFA.Edge(from: 0, scalar: "a"): [0],
+                NFA.Edge(from: 1, scalar: "a"): [2],
+                NFA.Edge(from: 2, scalar: "b"): [3],
             ],
+            epsilonTransitions: [0: [1]],
             initial: 0,
             accepting: [3: true],
             nonAcceptingValue: false)
