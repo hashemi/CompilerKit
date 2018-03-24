@@ -10,6 +10,21 @@ struct NFA<T> {
     let initial: Int
     let accepting: [Int: T]
     let nonAcceptingValue: T
+    private let epsilonTransitions: [[Int]]
+    
+    init(vertices: Int, edges: [Edge], initial: Int, accepting: [Int: T], nonAcceptingValue: T) {
+        self.vertices = vertices
+        self.edges = edges
+        self.initial = initial
+        self.accepting = accepting
+        self.nonAcceptingValue = nonAcceptingValue
+        
+        var epsilonTransitions: [[Int]] = Array(repeating: [], count: vertices)
+        for e in edges where e.scalar == nil {
+            epsilonTransitions[e.from].append(e.to)
+        }
+        self.epsilonTransitions = epsilonTransitions
+    }
     
     var alphabet: Set<UnicodeScalar> {
         return edges.reduce(into: Set<UnicodeScalar>(), { set, edge in
@@ -21,9 +36,7 @@ struct NFA<T> {
         var newStates = states
         var worklist = Array(states)
         while let state = worklist.popLast() {
-            let newReachableStates = edges
-                .filter { $0.from == state && !newStates.contains($0.to) && $0.scalar == nil }
-                .map { $0.to }
+            let newReachableStates = epsilonTransitions[state].filter { !newStates.contains($0) }
             worklist.append(contentsOf: newReachableStates)
             newStates.formUnion(newReachableStates)
         }
