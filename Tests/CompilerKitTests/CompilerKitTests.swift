@@ -7,9 +7,8 @@ final class CompilerKitTests: XCTestCase {
         let nfa = NFA(
             vertices: 4,
             edges: [
-                NFA.Edge(from: 0, scalar: "a"): [0],
-                NFA.Edge(from: 1, scalar: "a"): [2],
-                NFA.Edge(from: 2, scalar: "b"): [3],
+                "a": [(0, 0), (1, 2)],
+                "b": [(2, 3)]
             ],
             epsilonTransitions: [0: [1]],
             initial: 0,

@@ -1,26 +1,12 @@
 import Bitset
 
 struct NFA<T> {
-    struct Edge: Hashable {
-        let from: Int
-        let scalar: UnicodeScalar
-    }
-    
     let vertices: Int
-    let edges: [Edge: [Int]]
+    let edges: [UnicodeScalar: [(Int, Int)]]
     let epsilonTransitions: [Int: [Int]]
     let initial: Int
     let accepting: [Int: T]
     let nonAcceptingValue: T
-    
-    init(vertices: Int, edges: [Edge: [Int]], epsilonTransitions: [Int: [Int]], initial: Int, accepting: [Int: T], nonAcceptingValue: T) {
-        self.vertices = vertices
-        self.edges = edges
-        self.epsilonTransitions = epsilonTransitions
-        self.initial = initial
-        self.accepting = accepting
-        self.nonAcceptingValue = nonAcceptingValue
-    }
     
     var epsilonClosures: [Bitset] {
         var epsilonClosures: [Bitset] = []
@@ -43,11 +29,10 @@ struct NFA<T> {
         return epsilonClosures
     }
     
-    var alphabet: Set<UnicodeScalar> {
-        return edges.keys.reduce(into: Set<UnicodeScalar>(), { set, edge in
-            set.insert(edge.scalar)
-        })
+    var alphabet: Dictionary<UnicodeScalar, [(Int, Int)]>.Keys {
+        return edges.keys
     }
+
     func epsilonClosure(from states: Bitset) -> Bitset {
         var marked = Bitset()
         
@@ -67,9 +52,9 @@ struct NFA<T> {
 
     func reachable(from states: Bitset, via scalar: UnicodeScalar) -> Bitset {
         let bitset = Bitset()
-        states.forEach {
-            edges[Edge(from: $0, scalar: scalar), default: []].forEach {
-                bitset.add($0)
+        for (from, to) in edges[scalar, default: []] {
+            if states.contains(from) {
+                bitset.add(to)
             }
         }
         return bitset
@@ -90,7 +75,7 @@ struct NFA<T> {
     func offset(by offset: Int) -> NFA {
         return NFA(
             vertices: vertices + offset,
-            edges: Dictionary(uniqueKeysWithValues: edges.map { (Edge(from: $0.key.from + offset, scalar: $0.key.scalar), $0.value.map { $0 + offset } ) }),
+            edges: edges.mapValues { $0.map { from, to in (from + offset, to + offset) } },
             epsilonTransitions: Dictionary(uniqueKeysWithValues: epsilonTransitions.map { ($0.key + offset, $0.value.map { $0 + offset }) }),
             initial: initial + offset,
             accepting: Dictionary(uniqueKeysWithValues: accepting.map { ($0.key + offset, $0.value) }),
@@ -103,13 +88,13 @@ extension NFA {
     init(alternatives: [NFA<T>], nonAcceptingValue: T) {
         let commonInitial = 0
         var vertices = 1
-        var edges: [Edge: [Int]] = [:]
+        var edges: [UnicodeScalar: [(Int, Int)]] = [:]
         var epsilonTransitions: [Int: [Int]] = [:]
         var accepting: [Int: T] = [:]
         
         for nfa in alternatives {
             let offset = nfa.offset(by: vertices)
-            edges.merge(offset.edges, uniquingKeysWith: { first, _ in first })
+            edges.merge(offset.edges, uniquingKeysWith: { $0 + $1 })
             epsilonTransitions.merge(offset.epsilonTransitions, uniquingKeysWith: { first, _ in first })
             epsilonTransitions[commonInitial, default: []].append(offset.initial)
             accepting.merge(offset.accepting, uniquingKeysWith: { first, _ in first })
@@ -193,7 +178,7 @@ extension NFA {
         case .scalar(let scalar):
              self.init(
                 vertices: 2,
-                edges: [Edge(from: 0, scalar: scalar): [1]],
+                edges: [scalar: [(0, 1)]],
                 epsilonTransitions: [:],
                 initial: 0,
                 accepting: [1: acceptingValue],
