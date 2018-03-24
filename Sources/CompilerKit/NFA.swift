@@ -59,6 +59,36 @@ struct NFA<T> {
     }
 }
 
+extension NFA {
+    init(alternatives: [NFA<T>], nonAcceptingValue: T) {
+        let commonInitial = 0
+        var vertices = 1
+        var edges: [Edge] = []
+        var accepting: [Int: T] = [:]
+        
+        for nfa in alternatives {
+            let offset = nfa.offset(by: vertices)
+            edges.append(contentsOf: offset.edges)
+            edges.append(Edge(from: commonInitial, to: offset.initial, scalar: nil))
+            accepting.merge(offset.accepting, uniquingKeysWith: { first, _ in first })
+            vertices = offset.vertices
+        }
+        
+        self.init(
+            vertices: vertices,
+            edges: edges,
+            initial: commonInitial,
+            accepting: accepting,
+            nonAcceptingValue: nonAcceptingValue
+        )
+    }
+    
+    init(scanner: [(RegularExpression, T)], nonAcceptingValue: T) {
+        let alternatives = scanner.map { NFA(re: $0.0, acceptingValue: $0.1, nonAcceptingValue: nonAcceptingValue) }
+        self.init(alternatives: alternatives, nonAcceptingValue: nonAcceptingValue)
+    }
+}
+
 // DFA from NFA (subset construction)
 extension NFA {
     var dfa: DFA<T> {
