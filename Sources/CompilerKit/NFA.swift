@@ -33,14 +33,20 @@ struct NFA<T> {
     }
     
     func epsilonClosure(from states: Set<Int>) -> Set<Int> {
-        var newStates = states
-        var worklist = Array(states)
-        while let state = worklist.popLast() {
-            let newReachableStates = epsilonTransitions[state].filter { !newStates.contains($0) }
-            worklist.append(contentsOf: newReachableStates)
-            newStates.formUnion(newReachableStates)
+        var marked: Set<Int> = []
+        
+        func dfs(_ s: Int) {
+            marked.insert(s)
+            for w in epsilonTransitions[s] {
+                if !marked.contains(w) { dfs(w) }
+            }
         }
-        return newStates
+        
+        for s in states {
+            if !marked.contains(s) { dfs(s) }
+        }
+        
+        return marked
     }
     
     func reachable(from states: Set<Int>, via scalar: UnicodeScalar) -> Set<Int> {
