@@ -43,7 +43,8 @@ final class CompilerKitTests: XCTestCase {
                 DFA.Edge(from: 1, scalar: "c"): 1
             ],
             initial: 0,
-            accepting: [1]
+            accepting: [1: true],
+            nonAcceptingValue: false
         )
         
         XCTAssertTrue(dfa.match("a"))
@@ -101,6 +102,28 @@ final class CompilerKitTests: XCTestCase {
         XCTAssertFalse(dfa.match("abac"))
         XCTAssertFalse(dfa.match("abbccbbccbca"))
         XCTAssertFalse(dfa.match("cbcab"))
+    }
+    
+    func testMultiAcceptingStatesDFA() {
+        enum Token { case aa, ab, ac, unknown }
+        
+        let dfa = DFA<Token>(
+            vertices: 5,
+            edges: [
+                DFA.Edge(from: 0, scalar: "a"): 1,
+                DFA.Edge(from: 1, scalar: "a"): 2,
+                DFA.Edge(from: 1, scalar: "b"): 3,
+                DFA.Edge(from: 1, scalar: "c"): 4,
+            ],
+            initial: 0,
+            accepting: [2: .aa, 3: .ab, 4: .ac],
+            nonAcceptingValue: .unknown
+        )
+        
+        XCTAssertEqual(dfa.match("aa"), .aa)
+        XCTAssertEqual(dfa.match("ab"), .ab)
+        XCTAssertEqual(dfa.match("ac"), .ac)
+        XCTAssertEqual(dfa.match("bb"), .unknown)
     }
     
     static var allTests = [

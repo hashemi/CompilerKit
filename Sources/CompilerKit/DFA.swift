@@ -1,4 +1,4 @@
-struct DFA {
+struct DFA<T> {
     struct Edge: Hashable {
         let from: Int
         let scalar: UnicodeScalar
@@ -11,17 +11,18 @@ struct DFA {
     let vertices: Int
     let edges: [Edge: Int]
     let initial: Int
-    let accepting: Set<Int>
+    let accepting: [Int: T]
+    let nonAcceptingValue: T
     
-    func match(_ s: String) -> Bool {
+    func match(_ s: String) -> T {
         var state = initial
         for scalar in s.unicodeScalars {
             guard let newState = edges[Edge(from: state, scalar: scalar)] else {
-                return false
+                return nonAcceptingValue
             }
             state = newState
         }
-        return accepting.contains(state)
+        return accepting[state] ?? nonAcceptingValue
     }
 }
 
@@ -30,9 +31,16 @@ extension DFA {
     var minimized: DFA {
         let alphabet = self.alphabet
         
-        // start with two partitions, 0 = non-accepting states, 1 = accepting states
-        var partition = (0..<self.vertices).map { self.accepting.contains($0) ? 1 : 0 }
-        var partitionCount = 2
+        // start with partitions: 0 = non-accepting states, and a separate bucket for each accepting state
+        var partitionCount = 1
+        var partition = (0..<self.vertices).map { (v: Int) -> Int in
+            if self.accepting.keys.contains(v) {
+                partitionCount += 1
+                return partitionCount - 1
+            } else {
+                return 0
+            }
+        }
         
         func split() {
             for scalar in alphabet {
@@ -73,11 +81,11 @@ extension DFA {
         }
         
         let initial = partition[self.initial]
-        let accepting = Set(self.accepting.map { partition[$0] })
+        let accepting = Dictionary(uniqueKeysWithValues: self.accepting.map { (partition[$0.key], $0.value) })
         let edges = Dictionary(
             self.edges.map { edge, target in
             (Edge(from: partition[edge.from], scalar: edge.scalar), partition[target]) }, uniquingKeysWith: { (first, _ ) in first })
         
-        return DFA(vertices: partitionCount, edges: edges, initial: initial, accepting: accepting)
+        return DFA(vertices: partitionCount, edges: edges, initial: initial, accepting: accepting, nonAcceptingValue: self.nonAcceptingValue)
     }
 }

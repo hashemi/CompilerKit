@@ -59,7 +59,7 @@ struct NFA {
 
 // DFA from NFA (subset construction)
 extension NFA {
-    var dfa: DFA {
+    var dfa: DFA<Bool> {
         let alphabet = self.alphabet
         let q0 = epsilonClosure(from: [self.initial])
         var Q: [Set<Int>] = [q0]
@@ -83,12 +83,12 @@ extension NFA {
         let vertices = Q.count
         
         let edges = Dictionary(uniqueKeysWithValues: T.map { t in
-            (DFA.Edge(from: qPositions[t.from]!, scalar: t.scalar), qPositions[t.to]!)
+            (DFA<Bool>.Edge(from: qPositions[t.from]!, scalar: t.scalar), qPositions[t.to]!)
         })
         
         let initial = 0 // this is always zero since we always add q0 first to Q
-        let accepting = Set(Q.enumerated().filter { $0.element.contains(self.accepting) }.map { $0.offset })
+        let accepting = Dictionary(uniqueKeysWithValues: Q.enumerated().filter { $0.element.contains(self.accepting) }.map { ($0.offset, true) })
         
-        return DFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting)
+        return DFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting, nonAcceptingValue: false)
     }
 }
