@@ -13,8 +13,6 @@ struct NFA<T> {
     let accepting: [Int: T]
     let nonAcceptingValue: T
     
-    private let epsilonClosures: [Bitset]
-    
     init(vertices: Int, edges: [Edge: [Int]], epsilonTransitions: [Int: [Int]], initial: Int, accepting: [Int: T], nonAcceptingValue: T) {
         self.vertices = vertices
         self.edges = edges
@@ -22,7 +20,9 @@ struct NFA<T> {
         self.initial = initial
         self.accepting = accepting
         self.nonAcceptingValue = nonAcceptingValue
-        
+    }
+    
+    var epsilonClosures: [Bitset] {
         var epsilonClosures: [Bitset] = []
         
         for v in 0..<vertices {
@@ -40,7 +40,7 @@ struct NFA<T> {
             epsilonClosures.append(marked)
         }
         
-        self.epsilonClosures = epsilonClosures
+        return epsilonClosures
     }
     
     var alphabet: Set<UnicodeScalar> {
@@ -48,15 +48,23 @@ struct NFA<T> {
             set.insert(edge.scalar)
         })
     }
-    
     func epsilonClosure(from states: Bitset) -> Bitset {
-        let all = Bitset()
-        for v in states {
-            all.union(epsilonClosures[v])
+        var marked = Bitset()
+        
+        func dfs(_ s: Int) {
+            marked.add(s)
+            for w in epsilonTransitions[s, default: []] {
+                if !marked.contains(w) { dfs(w) }
+            }
         }
-        return all
+        
+        for s in states {
+            if !marked.contains(s) { dfs(s) }
+        }
+        
+        return marked
     }
-    
+
     func reachable(from states: Bitset, via scalar: UnicodeScalar) -> Bitset {
         let bitset = Bitset()
         states.forEach {
@@ -127,6 +135,18 @@ extension NFA {
 // DFA from NFA (subset construction)
 extension NFA {
     var dfa: DFA<T> {
+        
+        // precompute and cache epsilon closures
+        let epsilonClosures = self.epsilonClosures
+        
+        func epsilonClosure(from states: Bitset) -> Bitset {
+            let all = Bitset()
+            for v in states {
+                all.union(epsilonClosures[v])
+            }
+            return all
+        }
+
         let alphabet = self.alphabet
         let q0 = epsilonClosure(from: [self.initial])
         var Q: [Bitset] = [q0]
