@@ -96,3 +96,102 @@ extension NFA {
         return DFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting, nonAcceptingValue: self.nonAcceptingValue)
     }
 }
+
+// Initialize NFA from RE
+extension NFA {
+    init(re: RegularExpression, acceptingValue: T, nonAcceptingValue: T) {
+        switch re {
+        case .scalar(let scalar):
+             self.init(
+                vertices: 2,
+                edges: [Edge(from: 0, to: 1, scalar: scalar)],
+                initial: 0,
+                accepting: 1,
+                acceptingValue: acceptingValue,
+                nonAcceptingValue: nonAcceptingValue
+            )
+
+        
+        case .concatenation(let re1, let re2):
+            let nfa1 = NFA(re: re1, acceptingValue: acceptingValue, nonAcceptingValue: nonAcceptingValue)
+            let nfa2 = NFA(re: re2, acceptingValue: acceptingValue, nonAcceptingValue: nonAcceptingValue)
+            
+            // nfa1 followed by nfa2 with episilon transition between them
+            let nfa2offset = nfa2.offset(by: nfa1.vertices)
+            let edges = nfa1.edges
+                + nfa2offset.edges
+                + [NFA.Edge(from: nfa1.accepting, to: nfa2offset.initial, scalar: nil)]
+            
+            self.init(
+                vertices: nfa2offset.vertices,
+                edges: edges,
+                initial: nfa1.initial,
+                accepting: nfa2offset.accepting,
+                acceptingValue: acceptingValue,
+                nonAcceptingValue: nonAcceptingValue
+            )
+
+        
+        case .alternation(let re1, let re2):
+            let nfa1 = NFA(re: re1, acceptingValue: acceptingValue, nonAcceptingValue: nonAcceptingValue)
+            let nfa2 = NFA(re: re2, acceptingValue: acceptingValue, nonAcceptingValue: nonAcceptingValue)
+            
+            // create a common initial state that points to each nfa's initial
+            // with an epsilon edge and a common accepting state from each nfa's
+            // accepting state
+            let nfa1offset = nfa1.offset(by: 1)
+            let nfa2offset = nfa2.offset(by: nfa1.vertices + 1)
+            
+            let vertices = nfa2offset.vertices + 1
+            let initial = 0
+            let accepting = vertices - 1
+            
+            let edges = nfa1offset.edges
+                + nfa2offset.edges
+                + [
+                    NFA.Edge(from: 0, to: nfa1offset.initial, scalar: nil),
+                    NFA.Edge(from: 0, to: nfa2offset.initial, scalar: nil),
+                    NFA.Edge(from: nfa1offset.accepting, to: accepting, scalar: nil),
+                    NFA.Edge(from: nfa2offset.accepting, to: accepting, scalar: nil)
+            ]
+            
+            self.init(
+                vertices: vertices,
+                edges: edges,
+                initial: initial,
+                accepting: accepting,
+                acceptingValue: acceptingValue,
+                nonAcceptingValue: nonAcceptingValue
+            )
+
+
+        case .closure(let re):
+            let nfa = NFA(re: re, acceptingValue: acceptingValue, nonAcceptingValue: nonAcceptingValue)
+            let offset = nfa.offset(by: 1)
+            
+            // close over NFA with a new initial and accepting states, and add edges to allow:
+            // - skipping the NFA by going from initial to accepting directly
+            // - going through NFA by connecting our initial and accepting states to those of NFA
+            // - looping over NFA many times by connecting NFAs accepting state to its initial state
+            let vertices = offset.vertices + 1
+            let initial = 0
+            let accepting = vertices - 1
+            let edges = offset.edges
+                + [
+                    NFA.Edge(from: initial, to: accepting, scalar: nil),
+                    NFA.Edge(from: initial, to: offset.initial, scalar: nil),
+                    NFA.Edge(from: offset.accepting, to: offset.initial, scalar: nil),
+                    NFA.Edge(from: offset.accepting, to: accepting, scalar: nil)
+                ]
+            
+            self.init(
+                vertices: vertices,
+                edges: edges,
+                initial: initial,
+                accepting: accepting,
+                acceptingValue: acceptingValue,
+                nonAcceptingValue: nonAcceptingValue
+            )
+        }
+    }
+}
