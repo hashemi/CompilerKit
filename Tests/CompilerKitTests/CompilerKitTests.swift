@@ -128,21 +128,28 @@ final class CompilerKitTests: XCTestCase {
     }
     
     func testScanner() {
-        enum Token { case aa, ab, ac, unknown }
+        enum Token {
+            case integer
+            case decimal
+            case identifier
+            case unknown
+        }
         
         let scanner: [(RegularExpression, Token)] = [
-            ("a" + "a", .aa),
-            ("a" + "b", .ab),
-            ("a" + "c", .ac),
+            (.digit + .digit*, .integer),
+            (.digit + .digit* + "." + .digit + .digit*, .decimal),
+            (.alpha + .alphanum*, .identifier),
         ]
-        
-        let dfa = NFA<Token>(scanner: scanner, nonAcceptingValue: .unknown)
-                    .dfa.minimized
-        
-        XCTAssertEqual(dfa.match("aa"), .aa)
-        XCTAssertEqual(dfa.match("ab"), .ab)
-        XCTAssertEqual(dfa.match("ac"), .ac)
-        XCTAssertEqual(dfa.match("bb"), .unknown)
+
+        measure {
+            let dfa = NFA<Token>(scanner: scanner, nonAcceptingValue: .unknown)
+                        .dfa.minimized
+
+            XCTAssertEqual(dfa.match("134"), .integer)
+            XCTAssertEqual(dfa.match("61.613"), .decimal)
+            XCTAssertEqual(dfa.match("x1"), .identifier)
+            XCTAssertEqual(dfa.match("1xy"), .unknown)
+        }
     }
 
     static var allTests = [
