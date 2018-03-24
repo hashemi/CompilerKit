@@ -11,11 +11,12 @@ let package = Package(
             targets: ["CompilerKit"]),
     ],
     dependencies: [
+        .package(url: "https://github.com/lemire/SwiftBitset.git",  from: "0.3.2")
     ],
     targets: [
         .target(
             name: "CompilerKit",
-            dependencies: []),
+            dependencies: ["Bitset"]),
         .testTarget(
             name: "CompilerKitTests",
             dependencies: ["CompilerKit"]),

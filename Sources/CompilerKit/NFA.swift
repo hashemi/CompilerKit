@@ -1,3 +1,5 @@
+import Bitset
+
 struct NFA<T> {
     struct Edge {
         let from: Int
@@ -32,11 +34,11 @@ struct NFA<T> {
         })
     }
     
-    func epsilonClosure(from states: Set<Int>) -> Set<Int> {
-        var marked: Set<Int> = []
+    func epsilonClosure(from states: Bitset) -> Bitset {
+        var marked = Bitset()
         
         func dfs(_ s: Int) {
-            marked.insert(s)
+            marked.add(s)
             for w in epsilonTransitions[s] {
                 if !marked.contains(w) { dfs(w) }
             }
@@ -49,14 +51,16 @@ struct NFA<T> {
         return marked
     }
     
-    func reachable(from states: Set<Int>, via scalar: UnicodeScalar) -> Set<Int> {
-        return Set(edges
+    func reachable(from states: Bitset, via scalar: UnicodeScalar) -> Bitset {
+        let bitset = Bitset()
+        edges
             .filter { states.contains($0.from) && $0.scalar == scalar }
-            .map { $0.to })
+            .forEach { bitset.add($0.to) }
+        return bitset
     }
     
     func match(_ s: String) -> T {
-        var states: Set<Int> = [initial]
+        var states = Bitset(initial)
         for scalar in s.unicodeScalars {
             // add all states reachable by epsilon transitions
             states = epsilonClosure(from: states)
@@ -113,13 +117,13 @@ extension NFA {
     var dfa: DFA<T> {
         let alphabet = self.alphabet
         let q0 = epsilonClosure(from: [self.initial])
-        var Q: [Set<Int>] = [q0]
+        var Q: [Bitset] = [q0]
         var worklist = [q0]
-        var T: [(from: Set<Int>, to: Set<Int>, scalar: UnicodeScalar)] = []
+        var T: [(from: Bitset, to: Bitset, scalar: UnicodeScalar)] = []
         while let q = worklist.popLast() {
             for scalar in alphabet {
                 let t = epsilonClosure(from: reachable(from: q, via: scalar))
-                if t.isEmpty { continue }
+                if t.isEmpty() { continue }
                 T.append((from: q, to: t, scalar: scalar))
                 if !Q.contains(t) {
                     Q.append(t)
@@ -129,7 +133,7 @@ extension NFA {
         }
         
         // create a dictionary that maps sets to their positions in Q
-        let qPositions = Dictionary<Set<Int>, Int>(uniqueKeysWithValues: Q.enumerated().map { ($0.element, $0.offset) })
+        let qPositions = Dictionary<Bitset, Int>(uniqueKeysWithValues: Q.enumerated().map { ($0.element, $0.offset) })
 
         let vertices = Q.count
         
