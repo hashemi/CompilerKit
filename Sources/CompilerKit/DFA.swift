@@ -1,10 +1,10 @@
 struct DFA<T> {
     struct Edge: Hashable {
         let from: Int
-        let scalar: UnicodeScalar
+        let scalar: ScalarClass
     }
     
-    var alphabet: Set<UnicodeScalar> {
+    var alphabet: Set<ScalarClass> {
         return Set(edges.keys.map { $0.scalar })
     }
     
@@ -17,7 +17,11 @@ struct DFA<T> {
     func match(_ s: String) -> T {
         var state = initial
         for scalar in s.unicodeScalars {
-            guard let newState = edges[Edge(from: state, scalar: scalar)] else {
+            guard let scalarClass = alphabet.first(where: { $0 ~= scalar }) else {
+                return nonAcceptingValue
+            }
+            
+            guard let newState = edges[Edge(from: state, scalar: scalarClass)] else {
                 return nonAcceptingValue
             }
             state = newState

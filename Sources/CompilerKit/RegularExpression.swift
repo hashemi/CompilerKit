@@ -1,5 +1,5 @@
 indirect enum RegularExpression {
-    case scalar(UnicodeScalar)
+    case scalarClass(ScalarClass)
     case alternation(RegularExpression, RegularExpression)
     case concatenation(RegularExpression, RegularExpression)
     case closure(RegularExpression)
@@ -10,7 +10,7 @@ postfix operator *
 
 extension RegularExpression: ExpressibleByUnicodeScalarLiteral {
     init(unicodeScalarLiteral scalar: UnicodeScalar) {
-        self = .scalar(scalar)
+        self = .scalarClass(.single(scalar))
     }
     
     static func +(lhs: RegularExpression, rhs: RegularExpression) -> RegularExpression {
@@ -25,15 +25,11 @@ extension RegularExpression: ExpressibleByUnicodeScalarLiteral {
         return .closure(re)
     }
     
-    static let digit: RegularExpression = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+    static let digit: RegularExpression = .scalarClass(.range("0", "9"))
     
-    static let lowercase: RegularExpression = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h"
-        | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v"
-        | "w" | "x" | "y" | "z"
+    static let lowercase: RegularExpression = .scalarClass(.range("a", "z"))
 
-    static let uppercase: RegularExpression = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H"
-        | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V"
-        | "W" | "X" | "Y" | "Z"
+    static let uppercase: RegularExpression = .scalarClass(.range("A", "Z"))
     
     static let alpha: RegularExpression = .lowercase | .uppercase
     

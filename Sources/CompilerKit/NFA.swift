@@ -2,7 +2,7 @@ import Bitset
 
 struct NFA<T> {
     let vertices: Int
-    let edges: [UnicodeScalar: [(Int, Int)]]
+    let edges: [ScalarClass: [(Int, Int)]]
     let epsilonTransitions: [Int: [Int]]
     let initial: Int
     let accepting: [Int: T]
@@ -29,7 +29,7 @@ struct NFA<T> {
         return epsilonClosures
     }
     
-    var alphabet: Dictionary<UnicodeScalar, [(Int, Int)]>.Keys {
+    var alphabet: Dictionary<ScalarClass, [(Int, Int)]>.Keys {
         return edges.keys
     }
 
@@ -50,9 +50,9 @@ struct NFA<T> {
         return marked
     }
 
-    func reachable(from states: Bitset, via scalar: UnicodeScalar) -> Bitset {
+    func reachable(from states: Bitset, via scalarClass: ScalarClass) -> Bitset {
         let bitset = Bitset()
-        for (from, to) in edges[scalar, default: []] {
+        for (from, to) in edges[scalarClass, default: []] {
             if states.contains(from) {
                 bitset.add(to)
             }
@@ -66,8 +66,14 @@ struct NFA<T> {
             // add all states reachable by epsilon transitions
             states = epsilonClosure(from: states)
             
+            guard let scalarClass = alphabet.first(where: { $0 ~= scalar }) else {
+                return nonAcceptingValue
+            }
+            
             // new set of states as allowed by current scalar in string
-            states = reachable(from: states, via: scalar)
+            states = reachable(from: states, via: scalarClass)
+            
+            if states.isEmpty() { return nonAcceptingValue }
         }
         return states.compactMap { self.accepting[$0] }.first ?? nonAcceptingValue
     }
@@ -88,7 +94,7 @@ extension NFA {
     init(alternatives: [NFA<T>], nonAcceptingValue: T) {
         let commonInitial = 0
         var vertices = 1
-        var edges: [UnicodeScalar: [(Int, Int)]] = [:]
+        var edges: [ScalarClass: [(Int, Int)]] = [:]
         var epsilonTransitions: [Int: [Int]] = [:]
         var accepting: [Int: T] = [:]
         
@@ -168,10 +174,10 @@ extension NFA {
 extension NFA {
     init(re: RegularExpression, acceptingValue: T, nonAcceptingValue: T) {
         switch re {
-        case .scalar(let scalar):
+        case .scalarClass(let scalarClass):
              self.init(
                 vertices: 2,
-                edges: [scalar: [(0, 1)]],
+                edges: [scalarClass: [(0, 1)]],
                 epsilonTransitions: [:],
                 initial: 0,
                 accepting: [1: acceptingValue],
