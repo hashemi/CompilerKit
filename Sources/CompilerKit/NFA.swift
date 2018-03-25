@@ -133,41 +133,34 @@ extension NFA {
         }
 
         let alphabet = self.alphabet
-        let q0 = epsilonClosure(from: [self.initial])
+        let q0 = epsilonClosures[self.initial]
         var Q: [Bitset] = [q0]
-        var worklist = [q0]
-        var T: [(from: Bitset, to: Bitset, scalar: UnicodeScalar)] = []
-        while let q = worklist.popLast() {
+        var worklist = [(0, q0)]
+        var edges: [DFA<T>.Edge: Int] = [:]
+        var accepting: [Int: T] = [:]
+        while let (qpos, q) = worklist.popLast() {
             for scalar in alphabet {
                 let t = epsilonClosure(from: reachable(from: q, via: scalar))
                 if t.isEmpty() { continue }
-                T.append((from: q, to: t, scalar: scalar))
-                if !Q.contains(t) {
+                let position = Q.index(of: t) ?? Q.count
+                if position == Q.count {
                     Q.append(t)
-                    worklist.append(t)
+                    worklist.append((position, t))
+                    if let value = t.compactMap({ self.accepting[$0] }).first {
+                        accepting[Q.count - 1] = value
+                    }
                 }
+                edges[DFA<T>.Edge(from: qpos, scalar: scalar)] = position
             }
         }
         
-        // create a dictionary that maps sets to their positions in Q
-        let qPositions = Dictionary<Bitset, Int>(uniqueKeysWithValues: Q.enumerated().map { ($0.element, $0.offset) })
-
-        let vertices = Q.count
-        
-        let edges = Dictionary(uniqueKeysWithValues: T.map { t in
-            (DFA<T>.Edge(from: qPositions[t.from]!, scalar: t.scalar), qPositions[t.to]!)
-        })
-        
-        let initial = 0 // this is always zero since we always add q0 first to Q
-        let accepting = Dictionary(uniqueKeysWithValues: Q.enumerated().compactMap { (i, q) -> (Int, T)? in
-            if let value = q.compactMap({ self.accepting[$0] }).first {
-                return (i, value)
-            } else {
-                return nil
-            }
-        })
-        
-        return DFA(vertices: vertices, edges: edges, initial: initial, accepting: accepting, nonAcceptingValue: self.nonAcceptingValue)
+        return DFA(
+            vertices: Q.count,
+            edges: edges,
+            initial: 0, // this is always zero since q0 is always the first item in Q
+            accepting: accepting,
+            nonAcceptingValue: self.nonAcceptingValue
+        )
     }
 }
 
