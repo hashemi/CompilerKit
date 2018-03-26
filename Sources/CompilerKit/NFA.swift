@@ -1,5 +1,3 @@
-import Bitset
-
 struct NFA<T> {
     let vertices: Int
     let edges: [ScalarClass: [(Int, Int)]]
@@ -12,10 +10,10 @@ struct NFA<T> {
         var epsilonClosures: [Bitset] = []
         
         for v in 0..<vertices {
-            var marked = Bitset()
+            var marked = Bitset(maxValue: vertices)
             
             func dfs(_ s: Int) {
-                marked.add(s)
+                marked.insert(s)
                 for w in epsilonTransitions[s, default: []] {
                     if !marked.contains(w) { dfs(w) }
                 }
@@ -34,10 +32,10 @@ struct NFA<T> {
     }
 
     func epsilonClosure(from states: Bitset) -> Bitset {
-        var marked = Bitset()
+        var marked = Bitset(maxValue: vertices)
         
         func dfs(_ s: Int) {
-            marked.add(s)
+            marked.insert(s)
             for w in epsilonTransitions[s, default: []] {
                 if !marked.contains(w) { dfs(w) }
             }
@@ -51,17 +49,18 @@ struct NFA<T> {
     }
 
     func reachable(from states: Bitset, via scalarClass: ScalarClass) -> Bitset {
-        let bitset = Bitset()
+        var bitset = Bitset(maxValue: vertices)
         for (from, to) in edges[scalarClass, default: []] {
             if states.contains(from) {
-                bitset.add(to)
+                bitset.insert(to)
             }
         }
         return bitset
     }
     
     func match(_ s: String) -> T {
-        var states = Bitset(initial)
+        var states = Bitset(maxValue: vertices)
+        states.insert(initial)
         for scalar in s.unicodeScalars {
             // add all states reachable by epsilon transitions
             states = epsilonClosure(from: states)
@@ -73,7 +72,7 @@ struct NFA<T> {
             // new set of states as allowed by current scalar in string
             states = reachable(from: states, via: scalarClass)
             
-            if states.isEmpty() { return nonAcceptingValue }
+            if states.isEmpty { return nonAcceptingValue }
         }
         return states.compactMap { self.accepting[$0] }.first ?? nonAcceptingValue
     }
@@ -131,9 +130,9 @@ extension NFA {
         let epsilonClosures = self.epsilonClosures
         
         func epsilonClosure(from states: Bitset) -> Bitset {
-            let all = Bitset()
+            var all = Bitset(maxValue: vertices)
             for v in states {
-                all.union(epsilonClosures[v])
+                all.formUnion(epsilonClosures[v])
             }
             return all
         }
@@ -147,7 +146,7 @@ extension NFA {
         while let (qpos, q) = worklist.popLast() {
             for scalar in alphabet {
                 let t = epsilonClosure(from: reachable(from: q, via: scalar))
-                if t.isEmpty() { continue }
+                if t.isEmpty { continue }
                 let position = Q.index(of: t) ?? Q.count
                 if position == Q.count {
                     Q.append(t)
