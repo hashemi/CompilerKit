@@ -2,34 +2,6 @@ import XCTest
 @testable import CompilerKit
 
 final class CompilerKitTests: XCTestCase {
-    func testBitset() {
-        let max = 100
-        var bs1 = Bitset(maxValue: max)
-        var bs2 = Bitset(maxValue: max)
-        
-        for x in 0...max {
-            if x % 2 == 0 { bs1.insert(x) }
-            if x % 5 == 0 { bs2.insert(x) }
-        }
-        
-        var bs3 = bs1
-        var bs4 = bs2
-        
-        bs3.formUnion(bs2)
-        bs4.formUnion(bs1)
-        
-        XCTAssert(bs3 == bs4)
-        
-        for x in bs1 {
-            XCTAssert(bs3.contains(x))
-            XCTAssert(bs4.contains(x))
-        }
-        for x in bs2 {
-            XCTAssert(bs3.contains(x))
-            XCTAssert(bs4.contains(x))
-        }
-    }
-    
     func testNFA() {
         // a*ab - should match ab, aab, aaab, etc
         let nfa = NFA(

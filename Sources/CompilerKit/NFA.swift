@@ -6,11 +6,11 @@ struct NFA<T> {
     let accepting: [Int: T]
     let nonAcceptingValue: T
     
-    var epsilonClosures: [Bitset] {
-        var epsilonClosures: [Bitset] = []
+    var epsilonClosures: [Set<Int>] {
+        var epsilonClosures: [Set<Int>] = []
         
         for v in 0..<vertices {
-            var marked = Bitset(maxValue: vertices)
+            var marked = Set<Int>()
             
             func dfs(_ s: Int) {
                 marked.insert(s)
@@ -31,8 +31,8 @@ struct NFA<T> {
         return edges.keys
     }
 
-    func epsilonClosure(from states: Bitset) -> Bitset {
-        var marked = Bitset(maxValue: vertices)
+    func epsilonClosure(from states: Set<Int>) -> Set<Int> {
+        var marked = Set<Int>()
         
         func dfs(_ s: Int) {
             marked.insert(s)
@@ -48,18 +48,18 @@ struct NFA<T> {
         return marked
     }
 
-    func reachable(from states: Bitset, via scalarClass: ScalarClass) -> Bitset {
-        var bitset = Bitset(maxValue: vertices)
+    func reachable(from states: Set<Int>, via scalarClass: ScalarClass) -> Set<Int> {
+        var set = Set<Int>()
         for (from, to) in edges[scalarClass, default: []] {
             if states.contains(from) {
-                bitset.insert(to)
+                set.insert(to)
             }
         }
-        return bitset
+        return set
     }
     
     func match(_ s: String) -> T {
-        var states = Bitset(maxValue: vertices)
+        var states = Set<Int>()
         states.insert(initial)
         for scalar in s.unicodeScalars {
             // add all states reachable by epsilon transitions
@@ -129,8 +129,8 @@ extension NFA {
         // precompute and cache epsilon closures
         let epsilonClosures = self.epsilonClosures
         
-        func epsilonClosure(from states: Bitset) -> Bitset {
-            var all = Bitset(maxValue: vertices)
+        func epsilonClosure(from states: Set<Int>) -> Set<Int> {
+            var all = Set<Int>()
             for v in states {
                 all.formUnion(epsilonClosures[v])
             }
@@ -139,7 +139,7 @@ extension NFA {
 
         let alphabet = self.alphabet
         let q0 = epsilonClosures[self.initial]
-        var Q: [Bitset] = [q0]
+        var Q: [Set<Int>] = [q0]
         var worklist = [(0, q0)]
         var edges: [DFA<T>.Edge: Int] = [:]
         var accepting: [Int: T] = [:]
