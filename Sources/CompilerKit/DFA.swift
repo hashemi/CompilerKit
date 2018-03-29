@@ -33,11 +33,14 @@ struct DFA<T> {
 // minimal dfa (Hopcroft's Algorithm)
 extension DFA {
     var minimized: DFA {
-        let alphabet = self.alphabet
-        
+        let (partitionCount, partition) = partitionByAcceptingState()
+        return minimized(partitionCount, partition)
+    }
+    
+    func partitionByAcceptingState() -> (Int, [Int]) {
         // start with partitions: 0 = non-accepting states, and a separate bucket for each accepting state
         var partitionCount = 1
-        var partition = (0..<self.vertices).map { (v: Int) -> Int in
+        let partition = (0..<self.vertices).map { (v: Int) -> Int in
             if self.accepting.keys.contains(v) {
                 partitionCount += 1
                 return partitionCount - 1
@@ -45,7 +48,14 @@ extension DFA {
                 return 0
             }
         }
+        return (partitionCount, partition)
+    }
+    
+    func minimized(_ partitionCount: Int, _ partition: [Int]) -> DFA {
+        var partitionCount = partitionCount
+        var partition = partition
         
+        let alphabet = self.alphabet
         func split() {
             for scalar in alphabet {
                 // -1: not set yet, -2: no path exists from this partition for this scalar
@@ -85,11 +95,44 @@ extension DFA {
         }
         
         let initial = partition[self.initial]
-        let accepting = Dictionary(uniqueKeysWithValues: self.accepting.map { (partition[$0.key], $0.value) })
+        let accepting = Dictionary(
+            self.accepting.map { (partition[$0.key], $0.value) },
+            uniquingKeysWith: { (first, _) in first })
         let edges = Dictionary(
             self.edges.map { edge, target in
-            (Edge(from: partition[edge.from], scalar: edge.scalar), partition[target]) }, uniquingKeysWith: { (first, _ ) in first })
+                (Edge(from: partition[edge.from], scalar: edge.scalar), partition[target]) }, uniquingKeysWith: { (first, _ ) in first })
         
         return DFA(vertices: partitionCount, edges: edges, initial: initial, accepting: accepting, nonAcceptingValue: self.nonAcceptingValue)
+    }
+}
+
+// when accepting values are equatable, we can combine accepting states by value
+extension DFA where T: Equatable {
+    var minimized: DFA {
+        let (partitionCount, partition) = partitionByAcceptingState()
+        return minimized(partitionCount, partition)
+    }
+    
+    func partitionByAcceptingState() -> (Int, [Int]) {
+        // placing nonAcceptingValue at position 0 makes off-by-one errors less likely
+        var partitionsAcceptingValue: [T] = [nonAcceptingValue]
+        
+        // 0 = non-accepting states, and separate bucket for each accepting state that produces a different value
+        let partition = (0..<self.vertices).map { (v: Int) -> Int in
+            guard let acceptingValue = self.accepting[v] else {
+                return 0 // this vertex is not an accepting state, it stays in partition 0
+            }
+            
+            // this accepting value already has a partition, return it
+            if let p = partitionsAcceptingValue.index(of: acceptingValue) {
+                return p
+            }
+            
+            // need to give the value a partition
+            partitionsAcceptingValue.append(acceptingValue)
+            
+            return partitionsAcceptingValue.count - 1
+        }
+        return (partitionsAcceptingValue.count, partition)
     }
 }
