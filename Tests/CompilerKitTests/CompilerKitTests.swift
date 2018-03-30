@@ -150,6 +150,53 @@ final class CompilerKitTests: XCTestCase {
             XCTAssertEqual(dfa.match("1xy"), .unknown)
         }
     }
+    
+    func testGrammar() {
+        enum Token {
+            case plus, minus, multiply, divide
+            case leftBracket, rightBracket
+            case num, name
+        }
+        
+        var g = Grammar<Token>(productions:
+            [
+                // (0) Goal   -> Expr
+                [
+                    [.nt(1)],
+                ],
+                
+                // (1) Expr   -> Expr + Term
+                //             | Expr - Term
+                //             | Term
+                [
+                    [.nt(1), .t(.plus), .nt(2)],
+                    [.nt(1), .t(.minus), .nt(2)],
+                    [.nt(2)],
+                ],
+
+                // (2) Term   -> Term x Factor
+                //             | Term / Factor
+                //             | Factor
+                [
+                    [.nt(2), .t(.multiply), .nt(3)],
+                    [.nt(2), .t(.divide), .nt(3)],
+                    [.nt(3)],
+                ],
+
+                // (3) Factor -> ( Expr )
+                //             | num
+                //             | name
+                [
+                    [.t(.leftBracket), .nt(1), .t(.rightBracket)],
+                    [.t(.num)],
+                    [.t(.name)],
+                ],
+            ]
+        )
+        
+        g.eliminateLeftRecursion()
+        XCTAssertEqual(g.productions.count, 6)
+    }
 
     static var allTests = [
         ("testNFA", testNFA),
