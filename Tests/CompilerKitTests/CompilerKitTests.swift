@@ -225,7 +225,7 @@ final class CompilerKitTests: XCTestCase {
                 [.plus:     [1], .minus:       [2]],
                 [.multiply: [1], .divide:      [2]],
             ])
-        XCTAssertEqual(canBeEmpty, [false, false, false, false, true, true])
+        XCTAssertEqual(canBeEmpty, [[], [], [], [], [0], [0]])
         XCTAssertEqual(g.follow, [
                 Set<Token>([.eof]),
                 Set<Token>([.eof, .rightBracket]),

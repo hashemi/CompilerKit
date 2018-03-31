@@ -45,9 +45,9 @@ struct Grammar<T: Hashable> {
         }
     }
     
-    var first: ([[T: Set<Int>]], [Bool]) {
+    var first: ([[T: Set<Int>]], [Set<Int>]) {
         var first: [[T: Set<Int>]] = Array(repeating: [:], count: productions.count)
-        var canBeEmpty = Array(repeating: false, count: productions.count)
+        var canBeEmpty = Array(repeating: Set<Int>(), count: productions.count)
         
         func firstByNode(_ n: Node<T>) -> Set<T> {
             switch n {
@@ -59,7 +59,7 @@ struct Grammar<T: Hashable> {
         func canBeEmptyByNode(_ n: Node<T>) -> Bool {
             switch n {
             case .t(_): return false
-            case let .nt(nt): return canBeEmpty[nt]
+            case let .nt(nt): return !canBeEmpty[nt].isEmpty
             }
         }
         
@@ -68,7 +68,7 @@ struct Grammar<T: Hashable> {
             for s in 0..<productions.count {
                 for (pIdx, p) in productions[s].enumerated() {
                     guard !p.isEmpty else {
-                        canBeEmpty[s] = true
+                        canBeEmpty[s].insert(pIdx)
                         continue
                     }
                     
@@ -80,7 +80,7 @@ struct Grammar<T: Hashable> {
                     }
                     
                     if i == p.count - 1 && canBeEmptyByNode(p[i]) {
-                        canBeEmpty[s] = true
+                        canBeEmpty[s].insert(pIdx)
                     }
                     
                     for t in rhs {
@@ -110,7 +110,7 @@ struct Grammar<T: Hashable> {
                         case let .nt(nt):
                             follow[nt].formUnion(trailer)
                             
-                            if canBeEmpty[nt] {
+                            if !canBeEmpty[nt].isEmpty {
                                 trailer.formUnion(first[nt].keys)
                             } else {
                                 trailer = Set(first[nt].keys)
