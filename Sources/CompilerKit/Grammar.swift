@@ -2,7 +2,6 @@ struct Grammar<T: Hashable> {
     enum Node<T: Hashable>: Hashable {
         case nt(Int)
         case t(T)
-        case empty
     }
     
     var productions: [[[Node<T>]]]
@@ -32,7 +31,7 @@ struct Grammar<T: Hashable> {
             // eliminate direct left recursion
             if productions[i].contains(where: { $0.first == .nt(i) }) {
                 let newNt = productions.count
-                productions.append([[.empty]])
+                productions.append([[]])
                 let current = productions[i]
                 productions[i] = []
                 for p in current {
@@ -54,7 +53,6 @@ struct Grammar<T: Hashable> {
             switch n {
             case let .t(t): return Set([t])
             case let .nt(nt): return Set(first[nt].keys)
-            case .empty: return Set()
             }
         }
         
@@ -62,15 +60,18 @@ struct Grammar<T: Hashable> {
             switch n {
             case .t(_): return false
             case let .nt(nt): return canBeEmpty[nt]
-            case .empty: return true
             }
         }
         
-        var changing = true
-        while changing {
-            changing = false
+        while true {
+            let beforeIteration = (first, canBeEmpty)
             for s in 0..<productions.count {
                 for (pIdx, p) in productions[s].enumerated() {
+                    guard !p.isEmpty else {
+                        canBeEmpty[s] = true
+                        continue
+                    }
+                    
                     var rhs: Set<T> = firstByNode(p.first!)
                     var i = 0
                     while canBeEmptyByNode(p[i]) && i < p.count - 1 {
@@ -79,19 +80,15 @@ struct Grammar<T: Hashable> {
                     }
                     
                     if i == p.count - 1 && canBeEmptyByNode(p[i]) {
-                        if !canBeEmpty[s] {
-                            canBeEmpty[s] = true
-                            changing = true
-                        }
+                        canBeEmpty[s] = true
                     }
                     
-                    let beforeUpdate = first[s]
                     for t in rhs {
                         first[s][t, default: []].insert(pIdx)
                     }
-                    changing = changing || first[s] != beforeUpdate
                 }
             }
+            if (first, canBeEmpty) == beforeIteration { break }
         }
         
         return (first, canBeEmpty)
@@ -102,18 +99,16 @@ struct Grammar<T: Hashable> {
         var follow = Array(repeating: Set<T>(), count: productions.count)
         follow[rootTerm].insert(eof)
         
-        var changing = true
-        while changing {
-            changing = false
+        while true {
+            let beforeIteration = follow
             for s in 0..<productions.count {
                 for p in productions[s] {
                     var trailer = follow[s]
+                    if p.isEmpty { continue }
                     for n in p.reversed() {
                         switch n {
                         case let .nt(nt):
-                            let beforeUpdate = follow[nt]
                             follow[nt].formUnion(trailer)
-                            if follow[nt] != beforeUpdate { changing = true }
                             
                             if canBeEmpty[nt] {
                                 trailer.formUnion(first[nt].keys)
@@ -121,11 +116,11 @@ struct Grammar<T: Hashable> {
                                 trailer = Set(first[nt].keys)
                             }
                         case let .t(t): trailer = [t]
-                        case .empty: trailer = []
                         }
                     }
                 }
             }
+            if beforeIteration == follow { break }
         }
         
         return follow
