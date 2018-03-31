@@ -1,5 +1,5 @@
-struct Grammar<T: Equatable> {
-    enum Node<T: Equatable>: Equatable {
+struct Grammar<T: Hashable> {
+    enum Node<T: Hashable>: Hashable {
         case nt(Int)
         case t(T)
         case empty
@@ -43,4 +43,61 @@ struct Grammar<T: Equatable> {
             }
         }
     }
+    
+    var first: ([Set<T>], [Bool]) {
+        var first: [Set<T>] = Array(repeating: Set<T>(), count: productions.count)
+        var canBeEmpty = Array(repeating: false, count: productions.count)
+        
+        func firstByNode(_ n: Node<T>) -> Set<T> {
+            var ret: Set<T> = []
+            switch n {
+            case let .t(t): ret.insert(t)
+            case let .nt(nt): ret.formUnion(first[nt])
+            case .empty: break
+            }
+            return ret
+        }
+        
+        func canBeEmptyByNode(_ n: Node<T>) -> Bool {
+            switch n {
+            case .t(_): return false
+            case let .nt(nt): return canBeEmpty[nt]
+            case .empty: return true
+            }
+        }
+        
+        var changing = true
+        while changing {
+            changing = false
+            for s in 0..<productions.count {
+                for p in productions[s] where !p.isEmpty {
+                    var rhs: Set<T> = firstByNode(p.first!)
+                    var i = 0
+                    while canBeEmptyByNode(p[i]) && i < p.count - 1 {
+                        rhs.formUnion(firstByNode(p[i]))
+                        i += 1
+                    }
+                    
+                    if i == p.count - 1 && canBeEmptyByNode(p[i]) {
+                        if !canBeEmpty[s] {
+                            canBeEmpty[s] = true
+                            changing = true
+                        }
+                    }
+                    
+                    let current = first[s]
+                    rhs.formUnion(first[s])
+                    if rhs != current {
+                        first[s] = rhs
+                        changing = true
+                    }
+                }
+            }
+        }
+        
+        return (first, canBeEmpty)
+    }
+    
+    
 }
+

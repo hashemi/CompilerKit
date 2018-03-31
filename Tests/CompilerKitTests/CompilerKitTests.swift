@@ -152,10 +152,24 @@ final class CompilerKitTests: XCTestCase {
     }
     
     func testGrammar() {
-        enum Token {
+        enum Token: CustomStringConvertible {
             case plus, minus, multiply, divide
             case leftBracket, rightBracket
             case num, name
+            
+            var description: String {
+                func q(_ s: String) -> String { return "\"\(s)\"" }
+                switch self {
+                case .plus: return q("+")
+                case .minus: return q("-")
+                case .multiply: return q("*")
+                case .divide: return q("/")
+                case .leftBracket: return q("(")
+                case .rightBracket: return q(")")
+                case .name: return "name"
+                case .num: return "num"
+                }
+            }
         }
         
         var g = Grammar<Token>(productions:
@@ -196,6 +210,18 @@ final class CompilerKitTests: XCTestCase {
         
         g.eliminateLeftRecursion()
         XCTAssertEqual(g.productions.count, 6)
+        
+        let (firstSets, canBeEmpty) = g.first
+        XCTAssertEqual(firstSets,
+            [
+                Set<Token>([.num, .name, .leftBracket]),
+                Set<Token>([.num, .name, .leftBracket]),
+                Set<Token>([.num, .name, .leftBracket]),
+                Set<Token>([.num, .name, .leftBracket]),
+                Set<Token>([.plus, .minus]),
+                Set<Token>([.multiply, .divide]),
+            ])
+        XCTAssertEqual(canBeEmpty, [false, false, false, false, true, true])
     }
 
     static var allTests = [
