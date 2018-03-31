@@ -156,6 +156,7 @@ final class CompilerKitTests: XCTestCase {
             case plus, minus, multiply, divide
             case leftBracket, rightBracket
             case num, name
+            case eof
             
             var description: String {
                 func q(_ s: String) -> String { return "\"\(s)\"" }
@@ -168,6 +169,7 @@ final class CompilerKitTests: XCTestCase {
                 case .rightBracket: return q(")")
                 case .name: return "name"
                 case .num: return "num"
+                case .eof: return "eof"
                 }
             }
         }
@@ -205,7 +207,9 @@ final class CompilerKitTests: XCTestCase {
                     [.t(.num)],
                     [.t(.name)],
                 ],
-            ]
+            ],
+                               rootTerm: 0,
+                               eof: .eof
         )
         
         g.eliminateLeftRecursion()
@@ -222,6 +226,14 @@ final class CompilerKitTests: XCTestCase {
                 Set<Token>([.multiply, .divide]),
             ])
         XCTAssertEqual(canBeEmpty, [false, false, false, false, true, true])
+        XCTAssertEqual(g.follow, [
+                Set<Token>([.eof]),
+                Set<Token>([.eof, .rightBracket]),
+                Set<Token>([.eof, .rightBracket, .plus, .minus]),
+                Set<Token>([.eof, .rightBracket, .plus, .minus, .multiply, .divide]),
+                Set<Token>([.eof, .rightBracket]),
+                Set<Token>([.eof, .rightBracket, .plus, .minus]),
+            ])
     }
 
     static var allTests = [

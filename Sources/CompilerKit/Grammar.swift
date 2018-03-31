@@ -6,6 +6,8 @@ struct Grammar<T: Hashable> {
     }
     
     var productions: [[[Node<T>]]]
+    let rootTerm: Int
+    let eof: T
     
     mutating func eliminateLeftRecursion() {
         for i in 0..<productions.count {
@@ -98,6 +100,38 @@ struct Grammar<T: Hashable> {
         return (first, canBeEmpty)
     }
     
-    
+    var follow: [Set<T>] {
+        var (first, canBeEmpty) = self.first
+        var follow = Array(repeating: Set<T>(), count: productions.count)
+        follow[rootTerm].insert(eof)
+        
+        var changing = true
+        while changing {
+            changing = false
+            for s in 0..<productions.count {
+                for p in productions[s] {
+                    var trailer = follow[s]
+                    for n in p.reversed() {
+                        switch n {
+                        case let .nt(nt):
+                            let beforeUpdate = follow[nt]
+                            follow[nt].formUnion(trailer)
+                            if follow[nt] != beforeUpdate { changing = true }
+                            
+                            if canBeEmpty[nt] {
+                                trailer.formUnion(first[nt])
+                            } else {
+                                trailer = first[nt]
+                            }
+                        case let .t(t): trailer = [t]
+                        case .empty: trailer = []
+                        }
+                    }
+                }
+            }
+        }
+        
+        return follow
+    }
 }
 
