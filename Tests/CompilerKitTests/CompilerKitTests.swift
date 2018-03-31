@@ -234,6 +234,7 @@ final class CompilerKitTests: XCTestCase {
                 Set<Token>([.eof, .rightBracket]),
                 Set<Token>([.eof, .rightBracket, .plus, .minus]),
             ])
+        XCTAssert(g.isBacktrackFree)
     }
 
     static var allTests = [

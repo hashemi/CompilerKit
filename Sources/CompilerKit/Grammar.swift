@@ -125,5 +125,30 @@ struct Grammar<T: Hashable> {
         
         return follow
     }
+    
+    var isBacktrackFree: Bool {
+        let (first, canBeEmpty) = self.first
+        let follow = self.follow
+        for s in 0..<productions.count {
+            // make sure no term leads to more than 1 production
+            if first[s].values.contains(where: { $0.count > 1 }) {
+                return false
+            }
+            
+            // we can only have production that can be empty
+            if canBeEmpty[s].count > 1 { return false }
+            
+            // if we do have one empty production, we need to make sure that
+            // non of the terminals that can follow this term is also part of
+            // the first set of one of its productions
+            if canBeEmpty[s].count == 1 {
+                if !follow[s].isDisjoint(with: first[s].keys) {
+                    return false
+                }
+            }
+        }
+        
+        return true
+    }
 }
 
