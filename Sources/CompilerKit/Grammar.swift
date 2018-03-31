@@ -20,8 +20,8 @@ struct Grammar<T: Hashable> {
                             // replace the potentially problematic first NT
                             // with all of its possible productions
                             let tail = productions[i][p][1...]
-                            productions[i].remove(at: p)
-                            for sub in productions[j] {
+                            productions[i][p] = productions[j].first! + tail
+                            for sub in productions[j][1...] {
                                 productions[i].append(sub + tail)
                             }
                         }
@@ -51,13 +51,11 @@ struct Grammar<T: Hashable> {
         var canBeEmpty = Array(repeating: false, count: productions.count)
         
         func firstByNode(_ n: Node<T>) -> Set<T> {
-            var ret: Set<T> = []
             switch n {
-            case let .t(t): ret.insert(t)
-            case let .nt(nt): ret.formUnion(first[nt])
-            case .empty: break
+            case let .t(t): return Set([t])
+            case let .nt(nt): return first[nt]
+            case .empty: return Set()
             }
-            return ret
         }
         
         func canBeEmptyByNode(_ n: Node<T>) -> Bool {
@@ -87,9 +85,8 @@ struct Grammar<T: Hashable> {
                         }
                     }
                     
-                    let current = first[s]
                     rhs.formUnion(first[s])
-                    if rhs != current {
+                    if rhs != first[s] {
                         first[s] = rhs
                         changing = true
                     }
