@@ -46,14 +46,14 @@ struct Grammar<T: Hashable> {
         }
     }
     
-    var first: ([Set<T>], [Bool]) {
-        var first: [Set<T>] = Array(repeating: Set<T>(), count: productions.count)
+    var first: ([[T: Set<Int>]], [Bool]) {
+        var first: [[T: Set<Int>]] = Array(repeating: [:], count: productions.count)
         var canBeEmpty = Array(repeating: false, count: productions.count)
         
         func firstByNode(_ n: Node<T>) -> Set<T> {
             switch n {
             case let .t(t): return Set([t])
-            case let .nt(nt): return first[nt]
+            case let .nt(nt): return Set(first[nt].keys)
             case .empty: return Set()
             }
         }
@@ -70,7 +70,7 @@ struct Grammar<T: Hashable> {
         while changing {
             changing = false
             for s in 0..<productions.count {
-                for p in productions[s] where !p.isEmpty {
+                for (pIdx, p) in productions[s].enumerated() {
                     var rhs: Set<T> = firstByNode(p.first!)
                     var i = 0
                     while canBeEmptyByNode(p[i]) && i < p.count - 1 {
@@ -85,11 +85,11 @@ struct Grammar<T: Hashable> {
                         }
                     }
                     
-                    rhs.formUnion(first[s])
-                    if rhs != first[s] {
-                        first[s] = rhs
-                        changing = true
+                    let beforeUpdate = first[s]
+                    for t in rhs {
+                        first[s][t, default: []].insert(pIdx)
                     }
+                    changing = changing || first[s] != beforeUpdate
                 }
             }
         }
@@ -116,9 +116,9 @@ struct Grammar<T: Hashable> {
                             if follow[nt] != beforeUpdate { changing = true }
                             
                             if canBeEmpty[nt] {
-                                trailer.formUnion(first[nt])
+                                trailer.formUnion(first[nt].keys)
                             } else {
-                                trailer = first[nt]
+                                trailer = Set(first[nt].keys)
                             }
                         case let .t(t): trailer = [t]
                         case .empty: trailer = []

@@ -218,12 +218,12 @@ final class CompilerKitTests: XCTestCase {
         let (firstSets, canBeEmpty) = g.first
         XCTAssertEqual(firstSets,
             [
-                Set<Token>([.num, .name, .leftBracket]),
-                Set<Token>([.num, .name, .leftBracket]),
-                Set<Token>([.num, .name, .leftBracket]),
-                Set<Token>([.num, .name, .leftBracket]),
-                Set<Token>([.plus, .minus]),
-                Set<Token>([.multiply, .divide]),
+                [.num:      [0], .leftBracket: [0], .name: [0]],
+                [.num:      [0], .leftBracket: [0], .name: [0]],
+                [.num:      [0], .leftBracket: [0], .name: [0]],
+                [.num:      [1], .leftBracket: [0], .name: [2]],
+                [.plus:     [1], .minus:       [2]],
+                [.multiply: [1], .divide:      [2]],
             ])
         XCTAssertEqual(canBeEmpty, [false, false, false, false, true, true])
         XCTAssertEqual(g.follow, [
