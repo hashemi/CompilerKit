@@ -242,6 +242,19 @@ final class CompilerKitTests: XCTestCase {
                 [.rightBracket: 0, .plus: 1, .minus: 2, .eof: 0],
                 [.rightBracket: 0, .minus: 0, .multiply: 1, .divide: 2, .plus: 0, .eof: 0]
             ])
+        
+        XCTAssert(g.parse(term: 0, [.num, .eof]))
+        XCTAssert(g.parse(term: 0, [.num, .plus, .name, .eof]))
+        XCTAssert(g.parse(term: 0, [.leftBracket, .num, .plus, .num, .rightBracket, .eof]))
+        
+        // missing eof
+        XCTAssertFalse(g.parse(term: 0, [.num]))
+        
+        // unbalanced brackets
+        XCTAssertFalse(g.parse(term: 0, [.leftBracket, .leftBracket, .rightBracket, .num, .rightBracket, .eof]))
+        
+        // name followed by num
+        XCTAssertFalse(g.parse(term: 0, [.name, .num, .eof]))
     }
     
     func testBacktrackingGrammar() {
@@ -322,7 +335,7 @@ final class CompilerKitTests: XCTestCase {
         g.leftRefactor()
         XCTAssert(g.isBacktrackFree)
     }
-
+    
     static var allTests = [
         ("testNFA", testNFA),
         ("testRegularExpression", testRegularExpression),

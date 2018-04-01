@@ -225,5 +225,49 @@ struct Grammar<T: Hashable> {
         
         return table
     }
+    
+    func parse(term: Int, _ words: [T]) -> Bool {
+        let table = self.parsingTable
+        var current = 0
+        
+        func advance() { current += 1 }
+        
+        func peek() -> T? {
+            guard current < words.count else { return nil }
+            return words[current]
+        }
+        
+        var stack: [Node<T>] = [.nt(term)]
+        
+        while let focus = stack.popLast() {
+            guard let word = peek() else {
+                // unexpected end of input
+                return false
+            }
+            switch focus {
+            case let .t(t):
+                guard t == word else {
+                    // unexpected word
+                    return false
+                }
+                advance()
+            
+            case let .nt(nt):
+                guard let p = table[nt][word] else {
+                    // unexpected word
+                    return false
+                }
+                
+                stack.append(contentsOf: productions[nt][p].reversed())
+            }
+        }
+        
+        if peek() != nil {
+            // input contains unconsumed words at the end
+            return false
+        }
+        
+        return true
+    }
 }
 
