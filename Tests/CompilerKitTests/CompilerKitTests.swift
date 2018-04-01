@@ -236,6 +236,84 @@ final class CompilerKitTests: XCTestCase {
             ])
         XCTAssert(g.isBacktrackFree)
     }
+    
+    func testBacktrackingGrammar() {
+        enum Token: CustomStringConvertible {
+            case plus, minus, multiply, divide
+            case leftBracket, rightBracket
+            case comma
+            case num, name
+            case eof
+            
+            var description: String {
+                func q(_ s: String) -> String { return "\"\(s)\"" }
+                switch self {
+                case .plus: return q("+")
+                case .minus: return q("-")
+                case .multiply: return q("*")
+                case .divide: return q("/")
+                case .leftBracket: return q("(")
+                case .rightBracket: return q(")")
+                case .comma: return q(",")
+                case .name: return "name"
+                case .num: return "num"
+                case .eof: return "eof"
+                }
+            }
+        }
+        
+        var g = Grammar<Token>(productions:
+            [
+                // (0) Goal   -> Expr
+                [
+                    [.nt(1)],
+                ],
+            
+                // (1) Expr   -> Expr + Term
+                //             | Expr - Term
+                //             | Term
+                [
+                    [.nt(1), .t(.plus), .nt(2)],
+                    [.nt(1), .t(.minus), .nt(2)],
+                    [.nt(2)],
+                ],
+            
+                // (2) Term   -> Term x Factor
+                //             | Term / Factor
+                //             | Factor
+                [
+                    [.nt(2), .t(.multiply), .nt(3)],
+                    [.nt(2), .t(.divide), .nt(3)],
+                    [.nt(3)],
+                ],
+            
+                // (3) Factor -> ( Expr )
+                //             | num
+                //             | name
+                [
+                    [.t(.leftBracket), .nt(1), .t(.rightBracket)],
+                    [.t(.num)],
+                    [.t(.name)],
+                    [.t(.name), .t(.leftBracket), .nt(4), .t(.rightBracket)],
+                ],
+                // (4) ArgList -> Expr
+                [
+                    [.nt(1)]
+                ],
+            ],
+                               rootTerm: 0,
+                               eof: .eof
+        )
+        
+        g.eliminateLeftRecursion()
+        XCTAssertEqual(g.productions.count, 7)
+        
+        // there are two productions of Factor starting with .name
+        XCTAssertEqual(g.first.0[3][.name]?.count, 2)
+        
+        // ... which means that the grammar is NOT backtrack free
+        XCTAssert(!g.isBacktrackFree)
+    }
 
     static var allTests = [
         ("testNFA", testNFA),
