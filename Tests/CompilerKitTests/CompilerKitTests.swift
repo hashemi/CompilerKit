@@ -233,6 +233,15 @@ final class CompilerKitTests: XCTestCase {
                 Set<Token>([.eof, .rightBracket, .plus, .minus]),
             ])
         XCTAssert(g.isBacktrackFree)
+        XCTAssertEqual(g.parsingTable,
+            [
+                [.num: 0, .leftBracket: 0, .name: 0],
+                [.num: 0, .leftBracket: 0, .name: 0],
+                [.num: 0, .leftBracket: 0, .name: 0],
+                [.num: 1, .leftBracket: 0, .name: 2],
+                [.rightBracket: 0, .plus: 1, .minus: 2, .eof: 0],
+                [.rightBracket: 0, .minus: 0, .multiply: 1, .divide: 2, .plus: 0, .eof: 0]
+            ])
     }
     
     func testBacktrackingGrammar() {

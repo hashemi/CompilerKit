@@ -202,5 +202,28 @@ struct Grammar<T: Hashable> {
         
         return true
     }
+    
+    var parsingTable: [[T: Int]] {
+        let (first, canBeEmpty) = self.first
+        let follow = self.follow
+        
+        precondition(self.isBacktrackFree, "Cannot generate a parsing table for a non-backtrack free grammar")
+        
+        var table: [[T: Int]] = Array(repeating: [:], count: productions.count)
+        
+        for nt in 0..<productions.count {
+            first[nt].forEach { t, prods in
+                table[nt][t] = prods.first!
+            }
+            
+            if let emptyProduction = canBeEmpty[nt].first {
+                for t in follow[nt] {
+                    table[nt][t] = emptyProduction
+                }
+            }
+        }
+        
+        return table
+    }
 }
 
