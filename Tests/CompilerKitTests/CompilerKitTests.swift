@@ -178,7 +178,7 @@ final class CompilerKitTests: XCTestCase {
             [
                 // (0) Goal   -> Expr
                 [
-                    [.nt(1)],
+                    [.nt(1), .t(.eof)],
                 ],
                 
                 // (1) Expr   -> Expr + Term
@@ -207,9 +207,7 @@ final class CompilerKitTests: XCTestCase {
                     [.t(.num)],
                     [.t(.name)],
                 ],
-            ],
-                               rootTerm: 0,
-                               eof: .eof
+            ]
         )
         
         g.eliminateLeftRecursion()
@@ -227,7 +225,7 @@ final class CompilerKitTests: XCTestCase {
             ])
         XCTAssertEqual(canBeEmpty, [[], [], [], [], [0], [0]])
         XCTAssertEqual(g.follow, [
-                Set<Token>([.eof]),
+                Set<Token>([]),
                 Set<Token>([.eof, .rightBracket]),
                 Set<Token>([.eof, .rightBracket, .plus, .minus]),
                 Set<Token>([.eof, .rightBracket, .plus, .minus, .multiply, .divide]),
@@ -300,9 +298,7 @@ final class CompilerKitTests: XCTestCase {
                 [
                     [.nt(1)]
                 ],
-            ],
-                               rootTerm: 0,
-                               eof: .eof
+            ]
         )
         
         g.eliminateLeftRecursion()

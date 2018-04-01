@@ -5,8 +5,6 @@ struct Grammar<T: Hashable> {
     }
     
     var productions: [[[Node<T>]]]
-    let rootTerm: Int
-    let eof: T
     
     mutating func eliminateLeftRecursion() {
         for i in 0..<productions.count {
@@ -97,7 +95,6 @@ struct Grammar<T: Hashable> {
     var follow: [Set<T>] {
         var (first, canBeEmpty) = self.first
         var follow = Array(repeating: Set<T>(), count: productions.count)
-        follow[rootTerm].insert(eof)
         
         while true {
             let beforeIteration = follow
