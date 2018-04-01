@@ -43,6 +43,61 @@ struct Grammar<T: Hashable> {
         }
     }
     
+    mutating func leftRefactor() {
+        while true {
+            let lastProductions = productions
+            for s in 0..<productions.count {
+                for i in 0..<productions[s].count where !productions[s][i].isEmpty {
+                    var prefixLength = 1
+                    var matchingProductions = [i]
+                    while true {
+                        if prefixLength == productions[s][i].count { break }
+                        let lastProductions = matchingProductions
+                        matchingProductions = [i]
+                        for j in 0..<productions[s].count where i != j && productions[s][j].starts(with: productions[s][i].prefix(upTo: prefixLength)) {
+                                matchingProductions.append(j)
+                        }
+                        
+                        // had more matches before this iteration, undo the iteration and stop
+                        if matchingProductions.count < lastProductions.count {
+                            prefixLength -= 1
+                            matchingProductions = lastProductions
+                            break
+                        }
+                        
+                        // can't find matches with this prefix, no point trying a longer prefix
+                        if matchingProductions.count == 1 { break }
+                        
+                        prefixLength += 1
+                    }
+                    
+                    if matchingProductions.count > 1 {
+                        // save common prefix
+                        let commonPrefix = productions[s][matchingProductions.first!].prefix(upTo: prefixLength)
+                        
+                        // save matching productions with their common prefix removed
+                        let matchingProductionsWithoutCommonPrefix = matchingProductions.map {
+                            Array(productions[s][$0][prefixLength...])
+                        }
+                        
+                        // create a new NT for the common factor
+                        let newNt = productions.count
+                        productions.append(matchingProductionsWithoutCommonPrefix)
+                        
+                        productions[s] = productions[s]
+                            .enumerated()
+                            .filter { !matchingProductions.contains($0.offset) }
+                            .map { $0.element }
+                            + [commonPrefix + [.nt(newNt)]]
+                        
+                        break
+                    }
+                }
+            }
+            if productions == lastProductions { break }
+        }
+    }
+    
     var first: ([[T: Set<Int>]], [Set<Int>]) {
         var first: [[T: Set<Int>]] = Array(repeating: [:], count: productions.count)
         var canBeEmpty = Array(repeating: Set<Int>(), count: productions.count)

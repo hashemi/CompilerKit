@@ -309,6 +309,9 @@ final class CompilerKitTests: XCTestCase {
         
         // ... which means that the grammar is NOT backtrack free
         XCTAssert(!g.isBacktrackFree)
+        
+        g.leftRefactor()
+        XCTAssert(g.isBacktrackFree)
     }
 
     static var allTests = [
