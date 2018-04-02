@@ -38,7 +38,7 @@ extension RegularExpression: ExpressibleByUnicodeScalarLiteral {
 
 // Derive an NFA from a regular expression (Thompson's Construction)
 extension RegularExpression {
-    var nfa: NFA<Bool> {
+    var nfa: NFA<Bool, ScalarClass> {
         return NFA(re: self, acceptingValue: true, nonAcceptingValue: false)
     }
 }

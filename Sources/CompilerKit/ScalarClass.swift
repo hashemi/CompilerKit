@@ -1,4 +1,6 @@
-enum ScalarClass: Hashable {
+enum ScalarClass: Hashable, Matcher {
+    typealias Element = UnicodeScalar
+    
     case single(UnicodeScalar)
     case range(UnicodeScalar, UnicodeScalar)
     

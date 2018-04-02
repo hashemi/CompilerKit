@@ -1,6 +1,8 @@
-struct NFA<Output> {
+struct NFA<Output, M: Matcher & Hashable> {
+    typealias Element = M.Element
+    
     let states: Int
-    let transitions: [ScalarClass: [(Int, Int)]]
+    let transitions: [M: [(Int, Int)]]
     let epsilonTransitions: [Int: [Int]]
     let initial: Int
     let accepting: [Int: Output]
@@ -27,7 +29,7 @@ struct NFA<Output> {
         return epsilonClosures
     }
     
-    var alphabet: Dictionary<ScalarClass, [(Int, Int)]>.Keys {
+    var alphabet: Dictionary<M, [(Int, Int)]>.Keys {
         return transitions.keys
     }
 
@@ -48,9 +50,9 @@ struct NFA<Output> {
         return marked
     }
 
-    func reachable(from states: Set<Int>, via scalarClass: ScalarClass) -> Set<Int> {
+    func reachable(from states: Set<Int>, via matcher: M) -> Set<Int> {
         var set = Set<Int>()
-        for (from, to) in transitions[scalarClass, default: []] {
+        for (from, to) in transitions[matcher, default: []] {
             if states.contains(from) {
                 set.insert(to)
             }
@@ -58,19 +60,19 @@ struct NFA<Output> {
         return set
     }
     
-    func match(_ s: String) -> Output {
+    func match<S: Sequence>(_ elements: S) -> Output where S.Element == Element {
         var states = Set<Int>()
         states.insert(initial)
-        for scalar in s.unicodeScalars {
+        for element in elements {
             // add all states reachable by epsilon transitions
             states = epsilonClosure(from: states)
             
-            guard let scalarClass = alphabet.first(where: { $0 ~= scalar }) else {
+            guard let matcher = alphabet.first(where: { $0 ~= element }) else {
                 return nonAcceptingValue
             }
             
-            // new set of states as allowed by current scalar in string
-            states = reachable(from: states, via: scalarClass)
+            // new set of states as allowed by current element in string
+            states = reachable(from: states, via: matcher)
             
             if states.isEmpty { return nonAcceptingValue }
         }
@@ -89,8 +91,8 @@ struct NFA<Output> {
     }
 }
 
-extension NFA {
-    init(alternatives: [NFA<Output>], nonAcceptingValue: Output) {
+extension NFA where M == ScalarClass {
+    init(alternatives: [NFA<Output, ScalarClass>], nonAcceptingValue: Output) {
         let commonInitial = 0
         var states = 1
         var transitions: [ScalarClass: [(Int, Int)]] = [:]
@@ -117,14 +119,14 @@ extension NFA {
     }
     
     init(scanner: [(RegularExpression, Output)], nonAcceptingValue: Output) {
-        let alternatives = scanner.map { NFA(re: $0.0, acceptingValue: $0.1, nonAcceptingValue: nonAcceptingValue) }
+        let alternatives = scanner.map { NFA<Output, ScalarClass>(re: $0.0, acceptingValue: $0.1, nonAcceptingValue: nonAcceptingValue) }
         self.init(alternatives: alternatives, nonAcceptingValue: nonAcceptingValue)
     }
 }
 
 // DFA from NFA (subset construction)
 extension NFA {
-    var dfa: DFA<Output> {
+    var dfa: DFA<Output, M> {
         
         // precompute and cache epsilon closures
         let epsilonClosures = self.epsilonClosures
@@ -141,11 +143,11 @@ extension NFA {
         let q0 = epsilonClosures[self.initial]
         var Q: [Set<Int>] = [q0]
         var worklist = [(0, q0)]
-        var edges: [DFA<Output>.Transition: Int] = [:]
+        var transitions: [DFA<Output, M>.Transition: Int] = [:]
         var accepting: [Int: Output] = [:]
         while let (qpos, q) = worklist.popLast() {
-            for scalar in alphabet {
-                let t = epsilonClosure(from: reachable(from: q, via: scalar))
+            for matcher in alphabet {
+                let t = epsilonClosure(from: reachable(from: q, via: matcher))
                 if t.isEmpty { continue }
                 let position = Q.index(of: t) ?? Q.count
                 if position == Q.count {
@@ -155,13 +157,13 @@ extension NFA {
                         accepting[Q.count - 1] = value
                     }
                 }
-                edges[DFA<Output>.Transition(from: qpos, scalar: scalar)] = position
+                transitions[DFA<Output, M>.Transition(from: qpos, matcher: matcher)] = position
             }
         }
         
         return DFA(
             states: Q.count,
-            transitions: edges,
+            transitions: transitions,
             initial: 0, // this is always zero since q0 is always the first item in Q
             accepting: accepting,
             nonAcceptingValue: self.nonAcceptingValue
@@ -170,7 +172,7 @@ extension NFA {
 }
 
 // Initialize NFA from RE
-extension NFA {
+extension NFA where M == ScalarClass {
     init(re: RegularExpression, acceptingValue: Output, nonAcceptingValue: Output) {
         switch re {
         case .scalarClass(let scalarClass):

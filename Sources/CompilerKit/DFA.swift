@@ -1,11 +1,13 @@
-struct DFA<Output> {
+struct DFA<Output, M: Matcher & Hashable> {
+    typealias Element = M.Element
+    
     struct Transition: Hashable {
         let from: Int
-        let scalar: ScalarClass
+        let matcher: M
     }
     
-    var alphabet: Set<ScalarClass> {
-        return Set(transitions.keys.map { $0.scalar })
+    var alphabet: Set<M> {
+        return Set(transitions.keys.map { $0.matcher })
     }
     
     let states: Int
@@ -14,14 +16,14 @@ struct DFA<Output> {
     let accepting: [Int: Output]
     let nonAcceptingValue: Output
     
-    func match(_ s: String) -> Output {
+    func match<S: Sequence>(_ elements: S) -> Output where S.Element == Element {
         var state = initial
-        for scalar in s.unicodeScalars {
-            guard let scalarClass = alphabet.first(where: { $0 ~= scalar }) else {
+        for element in elements {
+            guard let matcher = alphabet.first(where: { $0 ~= element }) else {
                 return nonAcceptingValue
             }
             
-            guard let newState = transitions[Transition(from: state, scalar: scalarClass)] else {
+            guard let newState = transitions[Transition(from: state, matcher: matcher)] else {
                 return nonAcceptingValue
             }
             state = newState
@@ -57,14 +59,14 @@ extension DFA {
         
         let alphabet = self.alphabet
         func split() {
-            for scalar in alphabet {
+            for matcher in alphabet {
                 // -1: not set yet, -2: no path exists from this partition for this scalar
                 var partitionTarget = Array(repeating: -1, count: partitionCount)
                 var newPartition = Array(repeating: -1, count: partitionCount)
                 for x in 0..<self.states {
                     let p = partition[x]
                     let target: Int
-                    if let nextState = self.transitions[Transition(from: x, scalar: scalar)] {
+                    if let nextState = self.transitions[Transition(from: x, matcher: matcher)] {
                         target = partition[nextState]
                     } else {
                         target = -2
@@ -98,11 +100,11 @@ extension DFA {
         let accepting = Dictionary(
             self.accepting.map { (partition[$0.key], $0.value) },
             uniquingKeysWith: { (first, _) in first })
-        let edges = Dictionary(
-            self.transitions.map { edge, target in
-                (Transition(from: partition[edge.from], scalar: edge.scalar), partition[target]) }, uniquingKeysWith: { (first, _ ) in first })
+        let transitions = Dictionary(
+            self.transitions.map { transition, target in
+                (Transition(from: partition[transition.from], matcher: transition.matcher), partition[target]) }, uniquingKeysWith: { (first, _ ) in first })
         
-        return DFA(states: partitionCount, transitions: edges, initial: initial, accepting: accepting, nonAcceptingValue: self.nonAcceptingValue)
+        return DFA(states: partitionCount, transitions: transitions, initial: initial, accepting: accepting, nonAcceptingValue: self.nonAcceptingValue)
     }
 }
 
