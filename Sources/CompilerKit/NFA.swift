@@ -1,10 +1,10 @@
-struct NFA<T> {
+struct NFA<Output> {
     let states: Int
     let transitions: [ScalarClass: [(Int, Int)]]
     let epsilonTransitions: [Int: [Int]]
     let initial: Int
-    let accepting: [Int: T]
-    let nonAcceptingValue: T
+    let accepting: [Int: Output]
+    let nonAcceptingValue: Output
     
     var epsilonClosures: [Set<Int>] {
         var epsilonClosures: [Set<Int>] = []
@@ -58,7 +58,7 @@ struct NFA<T> {
         return set
     }
     
-    func match(_ s: String) -> T {
+    func match(_ s: String) -> Output {
         var states = Set<Int>()
         states.insert(initial)
         for scalar in s.unicodeScalars {
@@ -90,12 +90,12 @@ struct NFA<T> {
 }
 
 extension NFA {
-    init(alternatives: [NFA<T>], nonAcceptingValue: T) {
+    init(alternatives: [NFA<Output>], nonAcceptingValue: Output) {
         let commonInitial = 0
         var states = 1
         var transitions: [ScalarClass: [(Int, Int)]] = [:]
         var epsilonTransitions: [Int: [Int]] = [:]
-        var accepting: [Int: T] = [:]
+        var accepting: [Int: Output] = [:]
         
         for nfa in alternatives {
             let offset = nfa.offset(by: states)
@@ -116,7 +116,7 @@ extension NFA {
         )
     }
     
-    init(scanner: [(RegularExpression, T)], nonAcceptingValue: T) {
+    init(scanner: [(RegularExpression, Output)], nonAcceptingValue: Output) {
         let alternatives = scanner.map { NFA(re: $0.0, acceptingValue: $0.1, nonAcceptingValue: nonAcceptingValue) }
         self.init(alternatives: alternatives, nonAcceptingValue: nonAcceptingValue)
     }
@@ -124,7 +124,7 @@ extension NFA {
 
 // DFA from NFA (subset construction)
 extension NFA {
-    var dfa: DFA<T> {
+    var dfa: DFA<Output> {
         
         // precompute and cache epsilon closures
         let epsilonClosures = self.epsilonClosures
@@ -141,8 +141,8 @@ extension NFA {
         let q0 = epsilonClosures[self.initial]
         var Q: [Set<Int>] = [q0]
         var worklist = [(0, q0)]
-        var edges: [DFA<T>.Transition: Int] = [:]
-        var accepting: [Int: T] = [:]
+        var edges: [DFA<Output>.Transition: Int] = [:]
+        var accepting: [Int: Output] = [:]
         while let (qpos, q) = worklist.popLast() {
             for scalar in alphabet {
                 let t = epsilonClosure(from: reachable(from: q, via: scalar))
@@ -155,7 +155,7 @@ extension NFA {
                         accepting[Q.count - 1] = value
                     }
                 }
-                edges[DFA<T>.Transition(from: qpos, scalar: scalar)] = position
+                edges[DFA<Output>.Transition(from: qpos, scalar: scalar)] = position
             }
         }
         
@@ -171,7 +171,7 @@ extension NFA {
 
 // Initialize NFA from RE
 extension NFA {
-    init(re: RegularExpression, acceptingValue: T, nonAcceptingValue: T) {
+    init(re: RegularExpression, acceptingValue: Output, nonAcceptingValue: Output) {
         switch re {
         case .scalarClass(let scalarClass):
              self.init(

@@ -1,4 +1,4 @@
-struct DFA<T> {
+struct DFA<Output> {
     struct Transition: Hashable {
         let from: Int
         let scalar: ScalarClass
@@ -11,10 +11,10 @@ struct DFA<T> {
     let states: Int
     let transitions: [Transition: Int]
     let initial: Int
-    let accepting: [Int: T]
-    let nonAcceptingValue: T
+    let accepting: [Int: Output]
+    let nonAcceptingValue: Output
     
-    func match(_ s: String) -> T {
+    func match(_ s: String) -> Output {
         var state = initial
         for scalar in s.unicodeScalars {
             guard let scalarClass = alphabet.first(where: { $0 ~= scalar }) else {
@@ -107,7 +107,7 @@ extension DFA {
 }
 
 // when accepting values are equatable, we can combine accepting states by value
-extension DFA where T: Equatable {
+extension DFA where Output: Equatable {
     var minimized: DFA {
         let (partitionCount, partition) = partitionByAcceptingState()
         return minimized(partitionCount, partition)
@@ -115,7 +115,7 @@ extension DFA where T: Equatable {
     
     func partitionByAcceptingState() -> (Int, [Int]) {
         // placing nonAcceptingValue at position 0 makes off-by-one errors less likely
-        var partitionsAcceptingValue: [T] = [nonAcceptingValue]
+        var partitionsAcceptingValue: [Output] = [nonAcceptingValue]
         
         // 0 = non-accepting states, and separate bucket for each accepting state that produces a different value
         let partition = (0..<self.states).map { (v: Int) -> Int in
