@@ -5,8 +5,8 @@ final class CompilerKitTests: XCTestCase {
     func testNFA() {
         // a*ab - should match ab, aab, aaab, etc
         let nfa = NFA(
-            vertices: 4,
-            edges: [
+            states: 4,
+            transitions: [
                 .single("a"): [(0, 0), (1, 2)],
                 .single("b"): [(2, 3)]
             ],
@@ -36,11 +36,11 @@ final class CompilerKitTests: XCTestCase {
     func testDFA() {
         // a(b|c)* - should match a, ab, ac, abc, abbbb, acccc, abbccbcbbc, etc
         let dfa = DFA(
-            vertices: 2,
-            edges: [
-                DFA.Edge(from: 0, scalar: .single("a")): 1,
-                DFA.Edge(from: 1, scalar: .single("b")): 1,
-                DFA.Edge(from: 1, scalar: .single("c")): 1
+            states: 2,
+            transitions: [
+                DFA.Transition(from: 0, scalar: .single("a")): 1,
+                DFA.Transition(from: 1, scalar: .single("b")): 1,
+                DFA.Transition(from: 1, scalar: .single("c")): 1
             ],
             initial: 0,
             accepting: [1: true],
@@ -108,12 +108,12 @@ final class CompilerKitTests: XCTestCase {
         enum Token { case aa, ab, ac, unknown }
         
         let dfa = DFA<Token>(
-            vertices: 5,
-            edges: [
-                DFA.Edge(from: 0, scalar: .single("a")): 1,
-                DFA.Edge(from: 1, scalar: .single("a")): 2,
-                DFA.Edge(from: 1, scalar: .single("b")): 3,
-                DFA.Edge(from: 1, scalar: .single("c")): 4,
+            states: 5,
+            transitions: [
+                DFA.Transition(from: 0, scalar: .single("a")): 1,
+                DFA.Transition(from: 1, scalar: .single("a")): 2,
+                DFA.Transition(from: 1, scalar: .single("b")): 3,
+                DFA.Transition(from: 1, scalar: .single("c")): 4,
             ],
             initial: 0,
             accepting: [2: .aa, 3: .ab, 4: .ac],

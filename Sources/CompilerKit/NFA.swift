@@ -1,6 +1,6 @@
 struct NFA<T> {
-    let vertices: Int
-    let edges: [ScalarClass: [(Int, Int)]]
+    let states: Int
+    let transitions: [ScalarClass: [(Int, Int)]]
     let epsilonTransitions: [Int: [Int]]
     let initial: Int
     let accepting: [Int: T]
@@ -9,7 +9,7 @@ struct NFA<T> {
     var epsilonClosures: [Set<Int>] {
         var epsilonClosures: [Set<Int>] = []
         
-        for v in 0..<vertices {
+        for v in 0..<states {
             var marked = Set<Int>()
             
             func dfs(_ s: Int) {
@@ -28,7 +28,7 @@ struct NFA<T> {
     }
     
     var alphabet: Dictionary<ScalarClass, [(Int, Int)]>.Keys {
-        return edges.keys
+        return transitions.keys
     }
 
     func epsilonClosure(from states: Set<Int>) -> Set<Int> {
@@ -50,7 +50,7 @@ struct NFA<T> {
 
     func reachable(from states: Set<Int>, via scalarClass: ScalarClass) -> Set<Int> {
         var set = Set<Int>()
-        for (from, to) in edges[scalarClass, default: []] {
+        for (from, to) in transitions[scalarClass, default: []] {
             if states.contains(from) {
                 set.insert(to)
             }
@@ -79,8 +79,8 @@ struct NFA<T> {
     
     func offset(by offset: Int) -> NFA {
         return NFA(
-            vertices: vertices + offset,
-            edges: edges.mapValues { $0.map { from, to in (from + offset, to + offset) } },
+            states: states + offset,
+            transitions: transitions.mapValues { $0.map { from, to in (from + offset, to + offset) } },
             epsilonTransitions: Dictionary(uniqueKeysWithValues: epsilonTransitions.map { ($0.key + offset, $0.value.map { $0 + offset }) }),
             initial: initial + offset,
             accepting: Dictionary(uniqueKeysWithValues: accepting.map { ($0.key + offset, $0.value) }),
@@ -92,23 +92,23 @@ struct NFA<T> {
 extension NFA {
     init(alternatives: [NFA<T>], nonAcceptingValue: T) {
         let commonInitial = 0
-        var vertices = 1
-        var edges: [ScalarClass: [(Int, Int)]] = [:]
+        var states = 1
+        var transitions: [ScalarClass: [(Int, Int)]] = [:]
         var epsilonTransitions: [Int: [Int]] = [:]
         var accepting: [Int: T] = [:]
         
         for nfa in alternatives {
-            let offset = nfa.offset(by: vertices)
-            edges.merge(offset.edges, uniquingKeysWith: { $0 + $1 })
+            let offset = nfa.offset(by: states)
+            transitions.merge(offset.transitions, uniquingKeysWith: { $0 + $1 })
             epsilonTransitions.merge(offset.epsilonTransitions, uniquingKeysWith: { first, _ in first })
             epsilonTransitions[commonInitial, default: []].append(offset.initial)
             accepting.merge(offset.accepting, uniquingKeysWith: { first, _ in first })
-            vertices = offset.vertices
+            states = offset.states
         }
         
         self.init(
-            vertices: vertices,
-            edges: edges,
+            states: states,
+            transitions: transitions,
             epsilonTransitions: epsilonTransitions,
             initial: commonInitial,
             accepting: accepting,
@@ -141,7 +141,7 @@ extension NFA {
         let q0 = epsilonClosures[self.initial]
         var Q: [Set<Int>] = [q0]
         var worklist = [(0, q0)]
-        var edges: [DFA<T>.Edge: Int] = [:]
+        var edges: [DFA<T>.Transition: Int] = [:]
         var accepting: [Int: T] = [:]
         while let (qpos, q) = worklist.popLast() {
             for scalar in alphabet {
@@ -155,13 +155,13 @@ extension NFA {
                         accepting[Q.count - 1] = value
                     }
                 }
-                edges[DFA<T>.Edge(from: qpos, scalar: scalar)] = position
+                edges[DFA<T>.Transition(from: qpos, scalar: scalar)] = position
             }
         }
         
         return DFA(
-            vertices: Q.count,
-            edges: edges,
+            states: Q.count,
+            transitions: edges,
             initial: 0, // this is always zero since q0 is always the first item in Q
             accepting: accepting,
             nonAcceptingValue: self.nonAcceptingValue
@@ -175,8 +175,8 @@ extension NFA {
         switch re {
         case .scalarClass(let scalarClass):
              self.init(
-                vertices: 2,
-                edges: [scalarClass: [(0, 1)]],
+                states: 2,
+                transitions: [scalarClass: [(0, 1)]],
                 epsilonTransitions: [:],
                 initial: 0,
                 accepting: [1: acceptingValue],
@@ -189,9 +189,9 @@ extension NFA {
             let nfa2 = NFA(re: re2, acceptingValue: acceptingValue, nonAcceptingValue: nonAcceptingValue)
             
             // nfa1 followed by nfa2 with episilon transition between them
-            let nfa2offset = nfa2.offset(by: nfa1.vertices)
-            let edges = nfa1.edges
-                .merging(nfa2offset.edges, uniquingKeysWith: { $0 + $1 })
+            let nfa2offset = nfa2.offset(by: nfa1.states)
+            let transitions = nfa1.transitions
+                .merging(nfa2offset.transitions, uniquingKeysWith: { $0 + $1 })
             let epsilonTransitions = nfa1.epsilonTransitions
                 .merging(nfa2offset.epsilonTransitions, uniquingKeysWith: { $0 + $1 })
                 .merging(
@@ -199,8 +199,8 @@ extension NFA {
                     uniquingKeysWith: { $0 + $1 })
 
             self.init(
-                vertices: nfa2offset.vertices,
-                edges: edges,
+                states: nfa2offset.states,
+                transitions: transitions,
                 epsilonTransitions: epsilonTransitions,
                 initial: nfa1.initial,
                 accepting: nfa2offset.accepting,
@@ -215,13 +215,13 @@ extension NFA {
             // create a common initial state that points to each nfa's initial
             // with an epsilon edge and a combined accepting dictionary
             let nfa1offset = nfa1.offset(by: 1)
-            let nfa2offset = nfa2.offset(by: nfa1.vertices + 1)
+            let nfa2offset = nfa2.offset(by: nfa1.states + 1)
             
-            let vertices = nfa2offset.vertices
+            let states = nfa2offset.states
             let initial = 0
             
-            let edges = nfa1offset.edges
-                .merging(nfa2offset.edges, uniquingKeysWith: { $0 + $1 })
+            let transitions = nfa1offset.transitions
+                .merging(nfa2offset.transitions, uniquingKeysWith: { $0 + $1 })
             
             let epsilonTransitions = nfa1offset.epsilonTransitions
                 .merging(nfa2offset.epsilonTransitions, uniquingKeysWith: { $0 + $1 })
@@ -230,8 +230,8 @@ extension NFA {
             let accepting = nfa1offset.accepting.merging(nfa2offset.accepting, uniquingKeysWith: { first, _ in first })
             
             self.init(
-                vertices: vertices,
-                edges: edges,
+                states: states,
+                transitions: transitions,
                 epsilonTransitions: epsilonTransitions,
                 initial: initial,
                 accepting: accepting,
@@ -251,8 +251,8 @@ extension NFA {
                     nfa.accepting.keys.map { ($0, [nfa.initial]) }, uniquingKeysWith: { $0 + $1 })
             
             self.init(
-                vertices: nfa.vertices,
-                edges: nfa.edges,
+                states: nfa.states,
+                transitions: nfa.transitions,
                 epsilonTransitions: epsilonTransitions,
                 initial: nfa.initial,
                 accepting: accepting,

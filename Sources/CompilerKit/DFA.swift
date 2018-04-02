@@ -1,15 +1,15 @@
 struct DFA<T> {
-    struct Edge: Hashable {
+    struct Transition: Hashable {
         let from: Int
         let scalar: ScalarClass
     }
     
     var alphabet: Set<ScalarClass> {
-        return Set(edges.keys.map { $0.scalar })
+        return Set(transitions.keys.map { $0.scalar })
     }
     
-    let vertices: Int
-    let edges: [Edge: Int]
+    let states: Int
+    let transitions: [Transition: Int]
     let initial: Int
     let accepting: [Int: T]
     let nonAcceptingValue: T
@@ -21,7 +21,7 @@ struct DFA<T> {
                 return nonAcceptingValue
             }
             
-            guard let newState = edges[Edge(from: state, scalar: scalarClass)] else {
+            guard let newState = transitions[Transition(from: state, scalar: scalarClass)] else {
                 return nonAcceptingValue
             }
             state = newState
@@ -40,7 +40,7 @@ extension DFA {
     func partitionByAcceptingState() -> (Int, [Int]) {
         // start with partitions: 0 = non-accepting states, and a separate bucket for each accepting state
         var partitionCount = 1
-        let partition = (0..<self.vertices).map { (v: Int) -> Int in
+        let partition = (0..<self.states).map { (v: Int) -> Int in
             if self.accepting.keys.contains(v) {
                 partitionCount += 1
                 return partitionCount - 1
@@ -61,10 +61,10 @@ extension DFA {
                 // -1: not set yet, -2: no path exists from this partition for this scalar
                 var partitionTarget = Array(repeating: -1, count: partitionCount)
                 var newPartition = Array(repeating: -1, count: partitionCount)
-                for x in 0..<self.vertices {
+                for x in 0..<self.states {
                     let p = partition[x]
                     let target: Int
-                    if let nextState = self.edges[Edge(from: x, scalar: scalar)] {
+                    if let nextState = self.transitions[Transition(from: x, scalar: scalar)] {
                         target = partition[nextState]
                     } else {
                         target = -2
@@ -99,10 +99,10 @@ extension DFA {
             self.accepting.map { (partition[$0.key], $0.value) },
             uniquingKeysWith: { (first, _) in first })
         let edges = Dictionary(
-            self.edges.map { edge, target in
-                (Edge(from: partition[edge.from], scalar: edge.scalar), partition[target]) }, uniquingKeysWith: { (first, _ ) in first })
+            self.transitions.map { edge, target in
+                (Transition(from: partition[edge.from], scalar: edge.scalar), partition[target]) }, uniquingKeysWith: { (first, _ ) in first })
         
-        return DFA(vertices: partitionCount, edges: edges, initial: initial, accepting: accepting, nonAcceptingValue: self.nonAcceptingValue)
+        return DFA(states: partitionCount, transitions: edges, initial: initial, accepting: accepting, nonAcceptingValue: self.nonAcceptingValue)
     }
 }
 
@@ -118,7 +118,7 @@ extension DFA where T: Equatable {
         var partitionsAcceptingValue: [T] = [nonAcceptingValue]
         
         // 0 = non-accepting states, and separate bucket for each accepting state that produces a different value
-        let partition = (0..<self.vertices).map { (v: Int) -> Int in
+        let partition = (0..<self.states).map { (v: Int) -> Int in
             guard let acceptingValue = self.accepting[v] else {
                 return 0 // this vertex is not an accepting state, it stays in partition 0
             }
