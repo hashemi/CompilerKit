@@ -336,6 +336,116 @@ final class CompilerKitTests: XCTestCase {
         XCTAssert(g.isBacktrackFree)
     }
     
+    func testLRParser() {
+        enum Token: CustomStringConvertible {
+            func q(_ s: String) -> String { return "'\(s)'" }
+            case plus, multiply
+            case leftBracket, rightBracket
+            case int
+            case eof
+            
+            var description: String {
+                switch self {
+                case .plus: return q("+")
+                case .multiply: return q("*")
+                case .leftBracket: return q("(")
+                case .rightBracket: return q(")")
+                case .int: return "int"
+                case .eof: return "eof"
+                }
+            }
+        }
+        
+        let g = Grammar<Token>(productions:
+            [
+                // (0) E -> T | T + E
+                [[.nt(1)], [.nt(1), .t(.plus), .nt(0)]],
+                
+                // (1) T -> int | int * T | ( E )
+                [[.t(.int)], [.t(.int), .t(.multiply), .nt(1)], [.t(.leftBracket), .nt(0), .t(.rightBracket)]],
+            ]
+        )
+        
+        let parser = LRParser(g, 0)
+        XCTAssert(parser.parse([.int, .multiply, .int, .plus, .int]))
+    }
+    
+    func testLRParser2() {
+        enum Token: CustomStringConvertible {
+            case plus, minus, multiply, divide
+            case leftBracket, rightBracket
+            case num, name
+            case eof
+            
+            var description: String {
+                func q(_ s: String) -> String { return "\"\(s)\"" }
+                switch self {
+                case .plus: return q("+")
+                case .minus: return q("-")
+                case .multiply: return q("*")
+                case .divide: return q("/")
+                case .leftBracket: return q("(")
+                case .rightBracket: return q(")")
+                case .name: return "name"
+                case .num: return "num"
+                case .eof: return "eof"
+                }
+            }
+        }
+        
+        let g = Grammar<Token>(productions:
+            [
+                // (0) Goal   -> Expr
+                [
+                    [.nt(1), .t(.eof)],
+                    ],
+                
+                // (1) Expr   -> Expr + Term
+                //             | Expr - Term
+                //             | Term
+                [
+                    [.nt(1), .t(.plus), .nt(2)],
+                    [.nt(1), .t(.minus), .nt(2)],
+                    [.nt(2)],
+                    ],
+                
+                // (2) Term   -> Term x Factor
+                //             | Term / Factor
+                //             | Factor
+                [
+                    [.nt(2), .t(.multiply), .nt(3)],
+                    [.nt(2), .t(.divide), .nt(3)],
+                    [.nt(3)],
+                    ],
+                
+                // (3) Factor -> ( Expr )
+                //             | num
+                //             | name
+                [
+                    [.t(.leftBracket), .nt(1), .t(.rightBracket)],
+                    [.t(.num)],
+                    [.t(.name)],
+                    ],
+                ]
+        )
+        
+        let parser = LRParser(g, 0)
+        
+        XCTAssert(parser.parse([.num, .eof]))
+        XCTAssert(parser.parse([.num, .plus, .name, .eof]))
+        XCTAssert(parser.parse([.leftBracket, .num, .plus, .num, .rightBracket, .eof]))
+        
+        // missing eof
+        XCTAssertFalse(parser.parse([.num]))
+        
+        // unbalanced brackets
+        XCTAssertFalse(parser.parse([.leftBracket, .leftBracket, .rightBracket, .num, .rightBracket, .eof]))
+        
+        // name followed by num
+        XCTAssertFalse(parser.parse([.name, .num, .eof]))
+    }
+    
+    
     static var allTests = [
         ("testNFA", testNFA),
         ("testRegularExpression", testRegularExpression),

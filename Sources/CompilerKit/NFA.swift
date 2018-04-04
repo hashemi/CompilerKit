@@ -79,6 +79,25 @@ struct NFA<Output, M: Matcher & Hashable> {
         return states.compactMap { self.accepting[$0] }.first ?? nonAcceptingValue
     }
     
+    func matchAll<S: Sequence>(_ elements: S) -> Set<Output> where S.Element == Element {
+        var states = Set<Int>()
+        states.insert(initial)
+        for element in elements {
+            // add all states reachable by epsilon transitions
+            states = epsilonClosure(from: states)
+            
+            guard let matcher = alphabet.first(where: { $0 ~= element }) else {
+                return []
+            }
+            
+            // new set of states as allowed by current element in string
+            states = reachable(from: states, via: matcher)
+            
+            if states.isEmpty { return [] }
+        }
+        return Set(states.compactMap { self.accepting[$0] })
+    }
+
     func offset(by offset: Int) -> NFA {
         return NFA(
             states: states + offset,
