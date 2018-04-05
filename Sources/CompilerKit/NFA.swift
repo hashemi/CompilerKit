@@ -1,4 +1,4 @@
-struct NFA<Output, M: Matcher & Hashable> {
+struct NFA<Output: Hashable, M: Matcher & Hashable> {
     typealias Element = M.Element
     
     let states: Int
