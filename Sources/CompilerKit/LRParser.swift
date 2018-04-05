@@ -26,12 +26,12 @@ struct LRParser<T: Hashable> {
     let goal: Int
     let nfa: NFA<Action, Node>
     
-    init(_ g: Grammar<T>, _ originalGoal: Int) {
+    init(_ g: Grammar<T>) {
         var grammar = g
         
         // create a new goal that points to the provided goal
         self.goal = grammar.productions.count
-        grammar.productions.append([[.nt(originalGoal)]])
+        grammar.productions.append([[.nt(grammar.start)]])
         self.grammar = grammar
         
         // construct the LR(0) state machine

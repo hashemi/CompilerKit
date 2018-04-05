@@ -4,9 +4,8 @@ struct LLParser<T: Hashable> {
     let first: [[T: Set<Int>]]
     let follow: [Set<T>]
     let table: [[T: Int]]
-    let goal: Int
     
-    init(_ g: Grammar<T>, _ goal: Int) {
+    init(_ g: Grammar<T>) {
         var g = g
         
         // get the grammar ready for LL parsing
@@ -37,7 +36,6 @@ struct LLParser<T: Hashable> {
         
         self.grammar = g
         self.table = table
-        self.goal = goal
     }
     
     
@@ -51,7 +49,7 @@ struct LLParser<T: Hashable> {
             return words[current]
         }
         
-        var stack: [Grammar<T>.Node<T>] = [.nt(goal)]
+        var stack: [Grammar<T>.Node<T>] = [.nt(self.grammar.start)]
         
         while let focus = stack.popLast() {
             guard let word = peek() else {

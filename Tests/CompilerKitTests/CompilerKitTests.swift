@@ -207,7 +207,8 @@ final class CompilerKitTests: XCTestCase {
                     [.t(.num)],
                     [.t(.name)],
                 ],
-            ]
+            ],
+            start: 0
         )
         
         g.eliminateLeftRecursion()
@@ -239,7 +240,7 @@ final class CompilerKitTests: XCTestCase {
         
         XCTAssert(g.isBacktrackFree(nullable: nullable, first: first, follow: follow))
         
-        let parser = LLParser(g, 0)
+        let parser = LLParser(g)
         XCTAssertEqual(parser.table,
             [
                 [.num: 0, .leftBracket: 0, .name: 0],
@@ -327,7 +328,8 @@ final class CompilerKitTests: XCTestCase {
                 [
                     [.nt(1)]
                 ],
-            ]
+            ],
+            start: 0
         )
         
         g.eliminateLeftRecursion()
@@ -377,10 +379,11 @@ final class CompilerKitTests: XCTestCase {
                 
                 // (1) T -> int | int * T | ( E )
                 [[.t(.int)], [.t(.int), .t(.multiply), .nt(1)], [.t(.leftBracket), .nt(0), .t(.rightBracket)]],
-            ]
+            ],
+            start: 0
         )
         
-        let parser = LRParser(g, 0)
+        let parser = LRParser(g)
         XCTAssert(parser.parse([.int, .multiply, .int, .plus, .int]))
     }
     
@@ -440,10 +443,11 @@ final class CompilerKitTests: XCTestCase {
                     [.t(.num)],
                     [.t(.name)],
                     ],
-                ]
+                ],
+                start: 0
         )
         
-        let parser = LRParser(g, 0)
+        let parser = LRParser(g)
         
         XCTAssert(parser.parse([.num, .eof]))
         XCTAssert(parser.parse([.num, .plus, .name, .eof]))

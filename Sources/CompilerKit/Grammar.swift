@@ -5,6 +5,7 @@ struct Grammar<T: Hashable> {
     }
     
     var productions: [[[Node<T>]]]
+    var start: Int
     
     mutating func eliminateLeftRecursion() {
         for i in 0..<productions.count {
