@@ -238,7 +238,9 @@ final class CompilerKitTests: XCTestCase {
             ])
         
         XCTAssert(g.isBacktrackFree(nullable: nullable, first: first, follow: follow))
-        XCTAssertEqual(g.parsingTable,
+        
+        let parser = LLParser(g, 0)
+        XCTAssertEqual(parser.table,
             [
                 [.num: 0, .leftBracket: 0, .name: 0],
                 [.num: 0, .leftBracket: 0, .name: 0],
@@ -248,18 +250,18 @@ final class CompilerKitTests: XCTestCase {
                 [.rightBracket: 0, .minus: 0, .multiply: 1, .divide: 2, .plus: 0, .eof: 0]
             ])
         
-        XCTAssert(g.parse(term: 0, [.num, .eof]))
-        XCTAssert(g.parse(term: 0, [.num, .plus, .name, .eof]))
-        XCTAssert(g.parse(term: 0, [.leftBracket, .num, .plus, .num, .rightBracket, .eof]))
+        XCTAssert(parser.parse([.num, .eof]))
+        XCTAssert(parser.parse([.num, .plus, .name, .eof]))
+        XCTAssert(parser.parse([.leftBracket, .num, .plus, .num, .rightBracket, .eof]))
         
         // missing eof
-        XCTAssertFalse(g.parse(term: 0, [.num]))
+        XCTAssertFalse(parser.parse([.num]))
         
         // unbalanced brackets
-        XCTAssertFalse(g.parse(term: 0, [.leftBracket, .leftBracket, .rightBracket, .num, .rightBracket, .eof]))
+        XCTAssertFalse(parser.parse([.leftBracket, .leftBracket, .rightBracket, .num, .rightBracket, .eof]))
         
         // name followed by num
-        XCTAssertFalse(g.parse(term: 0, [.name, .num, .eof]))
+        XCTAssertFalse(parser.parse([.name, .num, .eof]))
     }
     
     func testBacktrackingGrammar() {
