@@ -13,6 +13,8 @@ Since this project is under active development, it's very likely that the follow
 - Nondeterministic finite automata (`NFA`).
 - Deterministic finite automata (`DFA`).
 - Grammar (`Grammar`).
+- LL parser (`LLParser`).
+- SLR parser (`LRParser`).
 
 ### Functions/Algorithms
 
@@ -25,7 +27,8 @@ Since this project is under active development, it's very likely that the follow
 - Eliminate left recursion from a grammar.
 - Perform left refactoring to eliminate backtracking.
 - Check if a grammar is backtracking-free.
-- Generate a table-driven LL(1) parser from a backtracking-free grammar, which reports whether the input was accepted or rejected.
+- Generate a table-driven LL(1) parser from a backtracking-free grammar, which reports whether an input was accepted or rejected.
+- Generate an NFA-backed SLR parser from a grammar, which reports whether an input was accepted or rejected.
 
 ## Example
 
@@ -54,6 +57,8 @@ Since this project is under active development, it's very likely that the follow
     minimizedDfa.match("1xy")      // .unknown
 ```
 
+See `Tests/CompilerKitTests/CompilerKitTests.swift` for more usage.
+
 ## See Also
 
 ### Resources guiding this project
@@ -62,9 +67,11 @@ Since this project is under active development, it's very likely that the follow
 
 2. [Algorithms](https://algs4.cs.princeton.edu/home/) 4th ed by Robert Sedgewick and Kevin Wayne.
 
-3. [Modern Compiler Implementation in C](https://www.cs.princeton.edu/~appel/modern/c/) by Maia Ginsburg and Andrew W. Appel.
+3. [Stanford's Compilers Course](https://lagunita.stanford.edu/courses/Engineering/Compilers/Fall2014/about) by Alex Aiken.
 
-4. [Modern Compiler Implementation in ML](https://www.cs.princeton.edu/~appel/modern/ml/) by Andrew W. Appel.
+4. [Modern Compiler Implementation in C](https://www.cs.princeton.edu/~appel/modern/c/) by Maia Ginsburg and Andrew W. Appel.
+
+5. [Modern Compiler Implementation in ML](https://www.cs.princeton.edu/~appel/modern/ml/) by Andrew W. Appel.
 
 ### My other projects, leading up to this
 
