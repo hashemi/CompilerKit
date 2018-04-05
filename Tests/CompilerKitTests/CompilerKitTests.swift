@@ -213,8 +213,11 @@ final class CompilerKitTests: XCTestCase {
         g.eliminateLeftRecursion()
         XCTAssertEqual(g.productions.count, 6)
         
-        let (firstSets, canBeEmpty) = g.first
-        XCTAssertEqual(firstSets,
+        let nullable = g.nullable()
+        XCTAssertEqual(nullable, [[], [], [], [], [0], [0]])
+        
+        let first = g.first(nullable: nullable)
+        XCTAssertEqual(first,
             [
                 [.num:      [0], .leftBracket: [0], .name: [0]],
                 [.num:      [0], .leftBracket: [0], .name: [0]],
@@ -223,8 +226,9 @@ final class CompilerKitTests: XCTestCase {
                 [.plus:     [1], .minus:       [2]],
                 [.multiply: [1], .divide:      [2]],
             ])
-        XCTAssertEqual(canBeEmpty, [[], [], [], [], [0], [0]])
-        XCTAssertEqual(g.follow, [
+        
+        let follow = g.follow(nullable: nullable, first: first)
+        XCTAssertEqual(follow, [
                 Set<Token>([]),
                 Set<Token>([.eof, .rightBracket]),
                 Set<Token>([.eof, .rightBracket, .plus, .minus]),
@@ -232,7 +236,8 @@ final class CompilerKitTests: XCTestCase {
                 Set<Token>([.eof, .rightBracket]),
                 Set<Token>([.eof, .rightBracket, .plus, .minus]),
             ])
-        XCTAssert(g.isBacktrackFree)
+        
+        XCTAssert(g.isBacktrackFree(nullable: nullable, first: first, follow: follow))
         XCTAssertEqual(g.parsingTable,
             [
                 [.num: 0, .leftBracket: 0, .name: 0],
@@ -327,13 +332,20 @@ final class CompilerKitTests: XCTestCase {
         XCTAssertEqual(g.productions.count, 7)
         
         // there are two productions of Factor starting with .name
-        XCTAssertEqual(g.first.0[3][.name]?.count, 2)
+        let nullable = g.nullable()
+        let first = g.first(nullable: nullable)
+        let follow = g.follow(nullable: nullable, first: first)
+
+        XCTAssertEqual(first[3][.name]?.count, 2)
         
         // ... which means that the grammar is NOT backtrack free
-        XCTAssert(!g.isBacktrackFree)
+        XCTAssert(!g.isBacktrackFree(nullable: nullable, first: first, follow: follow))
         
         g.leftRefactor()
-        XCTAssert(g.isBacktrackFree)
+        let newNullable = g.nullable()
+        let newFirst = g.first(nullable: newNullable)
+        let newFollow = g.follow(nullable: newNullable, first: newFirst)
+        XCTAssert(g.isBacktrackFree(nullable: newNullable, first: newFirst, follow: newFollow))
     }
     
     func testLRParser() {

@@ -98,9 +98,42 @@ struct Grammar<T: Hashable> {
         }
     }
     
-    var first: ([[T: Set<Int>]], [Set<Int>]) {
+    func nullable() -> [Set<Int>] {
+        var nullable: [Set<Int>] = Array(repeating: Set<Int>(), count: productions.count)
+        
+        func nodeIsNullabe(_ n: Node<T>) -> Bool {
+            switch n {
+            case .t(_): return false
+            case let .nt(nt): return !nullable[nt].isEmpty
+            }
+        }
+        
+        while true {
+            let lastValue = nullable
+            for s in 0..<productions.count {
+                for (pIdx, p) in productions[s].enumerated() {
+                    // production is nullable iff all of its nodes are nullable (or production is empty)
+                    let isNullable = { () -> Bool in
+                        for node in p where !nodeIsNullabe(node) {
+                            return false
+                        }
+                        return true
+                    }()
+                    
+                    if isNullable {
+                        nullable[s].insert(pIdx)
+                    }
+                }
+            }
+            if nullable == lastValue { break }
+        }
+        
+        return nullable
+    }
+    
+    func first(nullable: [Set<Int>]) -> [[T: Set<Int>]] {
+        precondition(nullable.count == productions.count)
         var first: [[T: Set<Int>]] = Array(repeating: [:], count: productions.count)
-        var canBeEmpty = Array(repeating: Set<Int>(), count: productions.count)
         
         func firstByNode(_ n: Node<T>) -> Set<T> {
             switch n {
@@ -109,31 +142,22 @@ struct Grammar<T: Hashable> {
             }
         }
         
-        func canBeEmptyByNode(_ n: Node<T>) -> Bool {
-            switch n {
-            case .t(_): return false
-            case let .nt(nt): return !canBeEmpty[nt].isEmpty
-            }
-        }
-        
         while true {
-            let beforeIteration = (first, canBeEmpty)
+            let lastValue = first
             for s in 0..<productions.count {
                 for (pIdx, p) in productions[s].enumerated() {
-                    guard !p.isEmpty else {
-                        canBeEmpty[s].insert(pIdx)
-                        continue
-                    }
+                    if p.isEmpty { continue }
                     
                     var rhs: Set<T> = firstByNode(p.first!)
-                    var i = 0
-                    while canBeEmptyByNode(p[i]) && i < p.count - 1 {
-                        rhs.formUnion(firstByNode(p[i]))
-                        i += 1
-                    }
                     
-                    if i == p.count - 1 && canBeEmptyByNode(p[i]) {
-                        canBeEmpty[s].insert(pIdx)
+                    for node in p {
+                        if case let .nt(nt) = node, !nullable[nt].isEmpty {
+                            // accumulate first sets of nonterminal nodes with nullable productions...
+                            rhs.formUnion(firstByNode(node))
+                        } else {
+                            // ...until we hit the first terminal or non-nullable
+                            break
+                        }
                     }
                     
                     for t in rhs {
@@ -141,18 +165,19 @@ struct Grammar<T: Hashable> {
                     }
                 }
             }
-            if (first, canBeEmpty) == beforeIteration { break }
+            if first == lastValue { break }
         }
         
-        return (first, canBeEmpty)
+        return first
     }
     
-    var follow: [Set<T>] {
-        var (first, canBeEmpty) = self.first
+    func follow(nullable: [Set<Int>], first: [[T: Set<Int>]]) -> [Set<T>] {
+        precondition(nullable.count == productions.count)
+        precondition(first.count == productions.count)
         var follow = Array(repeating: Set<T>(), count: productions.count)
         
         while true {
-            let beforeIteration = follow
+            let lastValue = follow
             for s in 0..<productions.count {
                 for p in productions[s] {
                     var trailer = follow[s]
@@ -162,7 +187,7 @@ struct Grammar<T: Hashable> {
                         case let .nt(nt):
                             follow[nt].formUnion(trailer)
                             
-                            if !canBeEmpty[nt].isEmpty {
+                            if !nullable[nt].isEmpty {
                                 trailer.formUnion(first[nt].keys)
                             } else {
                                 trailer = Set(first[nt].keys)
@@ -172,15 +197,17 @@ struct Grammar<T: Hashable> {
                     }
                 }
             }
-            if beforeIteration == follow { break }
+            if lastValue == follow { break }
         }
         
         return follow
     }
     
-    var isBacktrackFree: Bool {
-        let (first, canBeEmpty) = self.first
-        let follow = self.follow
+    func isBacktrackFree(nullable: [Set<Int>], first: [[T: Set<Int>]], follow: [Set<T>]) -> Bool {
+        precondition(nullable.count == productions.count)
+        precondition(first.count == productions.count)
+        precondition(follow.count == productions.count)
+        
         for s in 0..<productions.count {
             // make sure no term leads to more than 1 production
             if first[s].values.contains(where: { $0.count > 1 }) {
@@ -188,12 +215,12 @@ struct Grammar<T: Hashable> {
             }
             
             // we can only have production that can be empty
-            if canBeEmpty[s].count > 1 { return false }
+            if nullable[s].count > 1 { return false }
             
             // if we do have one empty production, we need to make sure that
             // non of the terminals that can follow this term is also part of
             // the first set of one of its productions
-            if canBeEmpty[s].count == 1 {
+            if nullable[s].count == 1 {
                 if !follow[s].isDisjoint(with: first[s].keys) {
                     return false
                 }
@@ -204,10 +231,12 @@ struct Grammar<T: Hashable> {
     }
     
     var parsingTable: [[T: Int]] {
-        let (first, canBeEmpty) = self.first
-        let follow = self.follow
+        let nullable = self.nullable()
+        let first = self.first(nullable: nullable)
+        let follow = self.follow(nullable: nullable, first: first)
         
-        precondition(self.isBacktrackFree, "Cannot generate a parsing table for a non-backtrack free grammar")
+        precondition(self.isBacktrackFree(nullable: nullable, first: first, follow: follow),
+                     "Cannot generate a parsing table for a non-backtrack free grammar")
         
         var table: [[T: Int]] = Array(repeating: [:], count: productions.count)
         
@@ -216,7 +245,7 @@ struct Grammar<T: Hashable> {
                 table[nt][t] = prods.first!
             }
             
-            if let emptyProduction = canBeEmpty[nt].first {
+            if let emptyProduction = nullable[nt].first {
                 for t in follow[nt] {
                     table[nt][t] = emptyProduction
                 }
@@ -251,7 +280,7 @@ struct Grammar<T: Hashable> {
                     return false
                 }
                 advance()
-            
+                
             case let .nt(nt):
                 guard let p = table[nt][word] else {
                     // unexpected word
@@ -270,4 +299,3 @@ struct Grammar<T: Hashable> {
         return true
     }
 }
-

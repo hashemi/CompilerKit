@@ -97,7 +97,9 @@ struct LRParser<T: Hashable> {
     func parse<S: Sequence>(_ elements: S) -> Bool where S.Element == T {
         var stack: [Node] = []
         var it = elements.makeIterator()
-        let follow = grammar.follow
+        let nullable = grammar.nullable()
+        let first = grammar.first(nullable: nullable)
+        let follow = grammar.follow(nullable: nullable, first: first)
         
         var lookahead = it.next()
         func advance() -> T? {
