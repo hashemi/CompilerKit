@@ -75,6 +75,31 @@ extension DFA {
             nonAcceptingValue: Set<NFAOutput>()
         )
     }
+    
+    init?(consistent nfa: NFA<Output, M>, nonAcceptingValue: Output) {
+        let dfa = DFA<Set<Output>, M>(nfa)
+        
+        var accepting: [Int: Output] = [:]
+        for (k,v) in dfa.accepting {
+            switch v.count {
+            case 0: break
+            case 1: accepting[k] = v.first!
+            default: return nil
+            }
+        }
+        
+        let transitions = Dictionary(uniqueKeysWithValues:
+            dfa.transitions.map { k,v in
+                (Transition(from: k.from, matcher: k.matcher), v)
+            }
+        )
+        
+        self.states = dfa.states
+        self.transitions = transitions
+        self.initial = dfa.initial
+        self.accepting = accepting
+        self.nonAcceptingValue = nonAcceptingValue
+    }
 }
 
 // minimal dfa (Hopcroft's Algorithm)

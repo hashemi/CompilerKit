@@ -65,43 +65,43 @@ final class FiniteStateTests: XCTestCase {
     func testRegularExpressionToDFAMatch() {
         // a(b|c)* - should match a, ab, ac, abc, abbbb, acccc, abbccbcbbc, etc
         let re: RegularExpression = "a" + ("b" | "c")*
-        let dfa = re.nfa.dfa
+        let dfa = DFA(consistent: re.nfa, nonAcceptingValue: false)!
         
-        XCTAssertTrue(dfa.match("a".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("ab".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("ac".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("abc".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("acb".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("abbbb".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("acccc".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("abbccbbccbc".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("a".unicodeScalars))
+        XCTAssertTrue(dfa.match("ab".unicodeScalars))
+        XCTAssertTrue(dfa.match("ac".unicodeScalars))
+        XCTAssertTrue(dfa.match("abc".unicodeScalars))
+        XCTAssertTrue(dfa.match("acb".unicodeScalars))
+        XCTAssertTrue(dfa.match("abbbb".unicodeScalars))
+        XCTAssertTrue(dfa.match("acccc".unicodeScalars))
+        XCTAssertTrue(dfa.match("abbccbbccbc".unicodeScalars))
         
-        XCTAssertFalse(dfa.match("aa".unicodeScalars).contains(true))
-        XCTAssertFalse(dfa.match("aba".unicodeScalars).contains(true))
-        XCTAssertFalse(dfa.match("abac".unicodeScalars).contains(true))
-        XCTAssertFalse(dfa.match("abbccbbccbca".unicodeScalars).contains(true))
-        XCTAssertFalse(dfa.match("cbcab".unicodeScalars).contains(true))
+        XCTAssertFalse(dfa.match("aa".unicodeScalars))
+        XCTAssertFalse(dfa.match("aba".unicodeScalars))
+        XCTAssertFalse(dfa.match("abac".unicodeScalars))
+        XCTAssertFalse(dfa.match("abbccbbccbca".unicodeScalars))
+        XCTAssertFalse(dfa.match("cbcab".unicodeScalars))
     }
     
     func testRegularExpressionToMinimizedDFAMatch() {
         // a(b|c)* - should match a, ab, ac, abc, abbbb, acccc, abbccbcbbc, etc
         let re: RegularExpression = "a" + ("b" | "c")*
-        let dfa = re.nfa.dfa.minimized
+        let dfa = DFA(consistent: re.nfa, nonAcceptingValue: false)!.minimized
         
-        XCTAssertTrue(dfa.match("a".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("ab".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("ac".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("abc".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("acb".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("abbbb".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("acccc".unicodeScalars).contains(true))
-        XCTAssertTrue(dfa.match("abbccbbccbc".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("a".unicodeScalars))
+        XCTAssertTrue(dfa.match("ab".unicodeScalars))
+        XCTAssertTrue(dfa.match("ac".unicodeScalars))
+        XCTAssertTrue(dfa.match("abc".unicodeScalars))
+        XCTAssertTrue(dfa.match("acb".unicodeScalars))
+        XCTAssertTrue(dfa.match("abbbb".unicodeScalars))
+        XCTAssertTrue(dfa.match("acccc".unicodeScalars))
+        XCTAssertTrue(dfa.match("abbccbbccbc".unicodeScalars))
         
-        XCTAssertFalse(dfa.match("aa".unicodeScalars).contains(true))
-        XCTAssertFalse(dfa.match("aba".unicodeScalars).contains(true))
-        XCTAssertFalse(dfa.match("abac".unicodeScalars).contains(true))
-        XCTAssertFalse(dfa.match("abbccbbccbca".unicodeScalars).contains(true))
-        XCTAssertFalse(dfa.match("cbcab".unicodeScalars).contains(true))
+        XCTAssertFalse(dfa.match("aa".unicodeScalars))
+        XCTAssertFalse(dfa.match("aba".unicodeScalars))
+        XCTAssertFalse(dfa.match("abac".unicodeScalars))
+        XCTAssertFalse(dfa.match("abbccbbccbca".unicodeScalars))
+        XCTAssertFalse(dfa.match("cbcab".unicodeScalars))
     }
     
     func testMultiAcceptingStatesDFA() {
