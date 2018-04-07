@@ -101,8 +101,12 @@ final class GrammarTests: XCTestCase {
         XCTAssert(g.isBacktrackFree(nullable: nullable, first: first, follow: follow))
     }
     
-    func testLLParser() {
+    func testLLParserConstruction() {
         let g = GrammarTests.grammar
+        
+        measure {
+            _ = LLParser(g)
+        }
         
         let parser = LLParser(g)
         XCTAssertEqual(parser.table,
@@ -114,26 +118,42 @@ final class GrammarTests: XCTestCase {
                 [.rightBracket: 0, .plus: 1, .minus: 2, .eof: 0],
                 [.rightBracket: 0, .minus: 0, .multiply: 1, .divide: 2, .plus: 0, .eof: 0]
             ])
+    }
+    
+    func testLLParserCorrectness() {
+        let g = GrammarTests.grammar
+        let parser = LLParser(g)
         
-        for s in GrammarTests.valid {
-            XCTAssert(parser.parse(s))
-        }
-        
-        for s in GrammarTests.invalid {
-            XCTAssertFalse(parser.parse(s))
+        measure {
+            for s in GrammarTests.valid {
+                XCTAssert(parser.parse(s))
+            }
+            
+            for s in GrammarTests.invalid {
+                XCTAssertFalse(parser.parse(s))
+            }
         }
     }
     
-    func testLRParser() {
+    func testLRConstruction() {
+        let g = GrammarTests.grammar
+        measure {
+            _ = LRParser(g)
+        }
+    }
+
+    func testLRParserCorrectness() {
         let g = GrammarTests.grammar
         let parser = LRParser(g)
-        
-        for s in GrammarTests.valid {
-            XCTAssert(parser.parse(s))
-        }
-        
-        for s in GrammarTests.invalid {
-            XCTAssertFalse(parser.parse(s))
+
+        measure {
+            for s in GrammarTests.valid {
+                XCTAssert(parser.parse(s))
+            }
+            
+            for s in GrammarTests.invalid {
+                XCTAssertFalse(parser.parse(s))
+            }
         }
     }
 
