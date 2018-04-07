@@ -50,7 +50,7 @@ extension DFA {
         var Q: [Set<Int>] = [q0]
         var worklist = [(0, q0)]
         var transitions: [DFA<Set<NFAOutput>, M>.Transition: Int] = [:]
-        var accepting: [Int: Set<NFAOutput>] = [:]
+        var accepting: [Int: Set<NFAOutput>] = [0: Set(q0.compactMap { nfa.accepting[$0] })]
         while let (qpos, q) = worklist.popLast() {
             for matcher in alphabet {
                 let t = nfa.epsilonClosure(from: nfa.reachable(from: q, via: matcher))
@@ -59,9 +59,7 @@ extension DFA {
                 if position == Q.count {
                     Q.append(t)
                     worklist.append((position, t))
-                    for value in t.compactMap({ nfa.accepting[$0] }) {
-                        accepting[Q.count - 1, default: []].insert(value)
-                    }
+                    accepting[Q.count - 1] = Set(t.compactMap({ nfa.accepting[$0] }))
                 }
                 transitions[DFA<Set<NFAOutput>, M>.Transition(from: qpos, matcher: matcher)] = position
             }
