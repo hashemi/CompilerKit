@@ -24,7 +24,7 @@ struct LRParser<T: Hashable> {
     
     let grammar: Grammar<T>
     let goal: Int
-    let nfa: NFA<Action, Node>
+    let dfa: DFA<Set<Action>, Node>
     
     init(_ g: Grammar<T>) {
         var grammar = g
@@ -84,13 +84,13 @@ struct LRParser<T: Hashable> {
             }
         }
         
-        self.nfa = NFA(
+        self.dfa = NFA(
             states: items.count + 1,
             transitions: transitions,
             epsilonTransitions: epsilonTransitions,
             initial: initial,
             accepting: accepting
-        )
+        ).dfa.minimized
     }
     
     func parse<S: Sequence>(_ elements: S) -> Bool where S.Element == T {
@@ -125,8 +125,7 @@ struct LRParser<T: Hashable> {
         }
         
         while true {
-            let actions = nfa.match(stack)
-            
+            let actions = dfa.match(stack)
             let action: Action
             
             switch actions.count {
