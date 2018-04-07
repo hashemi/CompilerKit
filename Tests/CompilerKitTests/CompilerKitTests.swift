@@ -12,13 +12,13 @@ final class CompilerKitTests: XCTestCase {
             ],
             epsilonTransitions: [0: [1]],
             initial: 0,
-            accepting: [3: true],
-            nonAcceptingValue: false)
-        XCTAssertTrue(nfa.match("aaab".unicodeScalars))
-        XCTAssertFalse(nfa.match("aaa".unicodeScalars))
-        XCTAssertTrue(nfa.match("ab".unicodeScalars))
-        XCTAssertFalse(nfa.match("b".unicodeScalars))
-        XCTAssertFalse(nfa.match("bbbbab".unicodeScalars))
+            accepting: [3: true]
+        )
+        XCTAssertTrue(nfa.match("aaab".unicodeScalars).contains(true))
+        XCTAssertFalse(nfa.match("aaa".unicodeScalars).contains(true))
+        XCTAssertTrue(nfa.match("ab".unicodeScalars).contains(true))
+        XCTAssertFalse(nfa.match("b".unicodeScalars).contains(true))
+        XCTAssertFalse(nfa.match("bbbbab".unicodeScalars).contains(true))
     }
     
     
@@ -26,11 +26,11 @@ final class CompilerKitTests: XCTestCase {
         // a*ab - should match ab, aab, aaab, etc
         let re: RegularExpression = "a"* + ("a" + "b")
         let derivedNfa = re.nfa
-        XCTAssertTrue(derivedNfa.match("aaab".unicodeScalars))
-        XCTAssertFalse(derivedNfa.match("aaa".unicodeScalars))
-        XCTAssertTrue(derivedNfa.match("ab".unicodeScalars))
-        XCTAssertFalse(derivedNfa.match("b".unicodeScalars))
-        XCTAssertFalse(derivedNfa.match("bbbbab".unicodeScalars))
+        XCTAssertTrue(derivedNfa.match("aaab".unicodeScalars).contains(true))
+        XCTAssertFalse(derivedNfa.match("aaa".unicodeScalars).contains(true))
+        XCTAssertTrue(derivedNfa.match("ab".unicodeScalars).contains(true))
+        XCTAssertFalse(derivedNfa.match("b".unicodeScalars).contains(true))
+        XCTAssertFalse(derivedNfa.match("bbbbab".unicodeScalars).contains(true))
     }
     
     func testDFA() {
@@ -67,20 +67,20 @@ final class CompilerKitTests: XCTestCase {
         let re: RegularExpression = "a" + ("b" | "c")*
         let dfa = re.nfa.dfa
         
-        XCTAssertTrue(dfa.match("a".unicodeScalars))
-        XCTAssertTrue(dfa.match("ab".unicodeScalars))
-        XCTAssertTrue(dfa.match("ac".unicodeScalars))
-        XCTAssertTrue(dfa.match("abc".unicodeScalars))
-        XCTAssertTrue(dfa.match("acb".unicodeScalars))
-        XCTAssertTrue(dfa.match("abbbb".unicodeScalars))
-        XCTAssertTrue(dfa.match("acccc".unicodeScalars))
-        XCTAssertTrue(dfa.match("abbccbbccbc".unicodeScalars))
+        XCTAssertTrue(dfa.match("a".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("ab".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("ac".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("abc".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("acb".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("abbbb".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("acccc".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("abbccbbccbc".unicodeScalars).contains(true))
         
-        XCTAssertFalse(dfa.match("aa".unicodeScalars))
-        XCTAssertFalse(dfa.match("aba".unicodeScalars))
-        XCTAssertFalse(dfa.match("abac".unicodeScalars))
-        XCTAssertFalse(dfa.match("abbccbbccbca".unicodeScalars))
-        XCTAssertFalse(dfa.match("cbcab".unicodeScalars))
+        XCTAssertFalse(dfa.match("aa".unicodeScalars).contains(true))
+        XCTAssertFalse(dfa.match("aba".unicodeScalars).contains(true))
+        XCTAssertFalse(dfa.match("abac".unicodeScalars).contains(true))
+        XCTAssertFalse(dfa.match("abbccbbccbca".unicodeScalars).contains(true))
+        XCTAssertFalse(dfa.match("cbcab".unicodeScalars).contains(true))
     }
 
     func testRegularExpressionToMinimizedDFAMatch() {
@@ -88,20 +88,20 @@ final class CompilerKitTests: XCTestCase {
         let re: RegularExpression = "a" + ("b" | "c")*
         let dfa = re.nfa.dfa.minimized
 
-        XCTAssertTrue(dfa.match("a".unicodeScalars))
-        XCTAssertTrue(dfa.match("ab".unicodeScalars))
-        XCTAssertTrue(dfa.match("ac".unicodeScalars))
-        XCTAssertTrue(dfa.match("abc".unicodeScalars))
-        XCTAssertTrue(dfa.match("acb".unicodeScalars))
-        XCTAssertTrue(dfa.match("abbbb".unicodeScalars))
-        XCTAssertTrue(dfa.match("acccc".unicodeScalars))
-        XCTAssertTrue(dfa.match("abbccbbccbc".unicodeScalars))
+        XCTAssertTrue(dfa.match("a".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("ab".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("ac".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("abc".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("acb".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("abbbb".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("acccc".unicodeScalars).contains(true))
+        XCTAssertTrue(dfa.match("abbccbbccbc".unicodeScalars).contains(true))
         
-        XCTAssertFalse(dfa.match("aa".unicodeScalars))
-        XCTAssertFalse(dfa.match("aba".unicodeScalars))
-        XCTAssertFalse(dfa.match("abac".unicodeScalars))
-        XCTAssertFalse(dfa.match("abbccbbccbca".unicodeScalars))
-        XCTAssertFalse(dfa.match("cbcab".unicodeScalars))
+        XCTAssertFalse(dfa.match("aa".unicodeScalars).contains(true))
+        XCTAssertFalse(dfa.match("aba".unicodeScalars).contains(true))
+        XCTAssertFalse(dfa.match("abac".unicodeScalars).contains(true))
+        XCTAssertFalse(dfa.match("abbccbbccbca".unicodeScalars).contains(true))
+        XCTAssertFalse(dfa.match("cbcab".unicodeScalars).contains(true))
     }
     
     func testMultiAcceptingStatesDFA() {
@@ -131,7 +131,6 @@ final class CompilerKitTests: XCTestCase {
             case integer
             case decimal
             case identifier
-            case unknown
         }
         
         let scanner: [(RegularExpression, Token)] = [
@@ -141,13 +140,13 @@ final class CompilerKitTests: XCTestCase {
         ]
 
         measure {
-            let dfa = NFA<Token, ScalarClass>(scanner: scanner, nonAcceptingValue: .unknown)
+            let dfa = NFA<Token, ScalarClass>(scanner: scanner)
                         .dfa.minimized
 
-            XCTAssertEqual(dfa.match("134".unicodeScalars), .integer)
-            XCTAssertEqual(dfa.match("61.613".unicodeScalars), .decimal)
-            XCTAssertEqual(dfa.match("x1".unicodeScalars), .identifier)
-            XCTAssertEqual(dfa.match("1xy".unicodeScalars), .unknown)
+            XCTAssertEqual(dfa.match("134".unicodeScalars), [.integer])
+            XCTAssertEqual(dfa.match("61.613".unicodeScalars), [.decimal])
+            XCTAssertEqual(dfa.match("x1".unicodeScalars), [.identifier])
+            XCTAssertEqual(dfa.match("1xy".unicodeScalars), [])
         }
     }
     

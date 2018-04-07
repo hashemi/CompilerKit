@@ -89,8 +89,7 @@ struct LRParser<T: Hashable> {
             transitions: transitions,
             epsilonTransitions: epsilonTransitions,
             initial: initial,
-            accepting: accepting,
-            nonAcceptingValue: .error
+            accepting: accepting
         )
     }
     
@@ -126,7 +125,7 @@ struct LRParser<T: Hashable> {
         }
         
         while true {
-            let actions = nfa.matchAll(stack)
+            let actions = nfa.match(stack)
             
             let action: Action
             

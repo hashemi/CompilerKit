@@ -32,6 +32,51 @@ struct DFA<Output: Hashable, M: Matcher & Hashable> {
     }
 }
 
+extension DFA {
+    init<NFAOutput: Hashable>(_ nfa: NFA<NFAOutput, M>) where Output == Set<NFAOutput> {
+        // precompute and cache epsilon closures
+        let epsilonClosures = nfa.epsilonClosures
+        
+        func epsilonClosure(from states: Set<Int>) -> Set<Int> {
+            var all = Set<Int>()
+            for v in states {
+                all.formUnion(epsilonClosures[v])
+            }
+            return all
+        }
+        
+        let alphabet = nfa.alphabet
+        let q0 = epsilonClosures[nfa.initial]
+        var Q: [Set<Int>] = [q0]
+        var worklist = [(0, q0)]
+        var transitions: [DFA<Set<NFAOutput>, M>.Transition: Int] = [:]
+        var accepting: [Int: Set<NFAOutput>] = [:]
+        while let (qpos, q) = worklist.popLast() {
+            for matcher in alphabet {
+                let t = nfa.epsilonClosure(from: nfa.reachable(from: q, via: matcher))
+                if t.isEmpty { continue }
+                let position = Q.index(of: t) ?? Q.count
+                if position == Q.count {
+                    Q.append(t)
+                    worklist.append((position, t))
+                    for value in t.compactMap({ nfa.accepting[$0] }) {
+                        accepting[Q.count - 1, default: []].insert(value)
+                    }
+                }
+                transitions[DFA<Set<NFAOutput>, M>.Transition(from: qpos, matcher: matcher)] = position
+            }
+        }
+        
+        self.init(
+            states: Q.count,
+            transitions: transitions,
+            initial: 0, // this is always zero since q0 is always the first item in Q
+            accepting: accepting,
+            nonAcceptingValue: Set<NFAOutput>()
+        )
+    }
+}
+
 // minimal dfa (Hopcroft's Algorithm)
 extension DFA {
     var minimized: DFA {
