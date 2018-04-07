@@ -2,65 +2,74 @@ import XCTest
 @testable import CompilerKit
 
 final class GrammarTests: XCTestCase {
-    func testGrammar() {
-        enum Token: CustomStringConvertible {
-            case plus, minus, multiply, divide
-            case leftBracket, rightBracket
-            case num, name
-            case eof
-            
-            var description: String {
-                func q(_ s: String) -> String { return "\"\(s)\"" }
-                switch self {
-                case .plus: return q("+")
-                case .minus: return q("-")
-                case .multiply: return q("*")
-                case .divide: return q("/")
-                case .leftBracket: return q("(")
-                case .rightBracket: return q(")")
-                case .name: return "name"
-                case .num: return "num"
-                case .eof: return "eof"
-                }
+    enum Token: CustomStringConvertible {
+        case plus, minus, multiply, divide
+        case leftBracket, rightBracket
+        case num, name
+        case eof
+        
+        var description: String {
+            func q(_ s: String) -> String { return "'\(s)'" }
+            switch self {
+            case .plus: return q("+")
+            case .minus: return q("-")
+            case .multiply: return q("*")
+            case .divide: return q("/")
+            case .leftBracket: return q("(")
+            case .rightBracket: return q(")")
+            case .name: return "name"
+            case .num: return "num"
+            case .eof: return "eof"
             }
         }
-        
-        var g = Grammar<Token>(productions:
-            [
-                // (0) Goal   -> Expr
-                [
-                    [.nt(1), .t(.eof)],
-                ],
-                
-                // (1) Expr   -> Expr + Term
-                //             | Expr - Term
-                //             | Term
-                [
-                    [.nt(1), .t(.plus), .nt(2)],
-                    [.nt(1), .t(.minus), .nt(2)],
-                    [.nt(2)],
-                ],
+    }
 
-                // (2) Term   -> Term x Factor
-                //             | Term / Factor
-                //             | Factor
-                [
-                    [.nt(2), .t(.multiply), .nt(3)],
-                    [.nt(2), .t(.divide), .nt(3)],
-                    [.nt(3)],
-                ],
-
-                // (3) Factor -> ( Expr )
-                //             | num
-                //             | name
-                [
-                    [.t(.leftBracket), .nt(1), .t(.rightBracket)],
-                    [.t(.num)],
-                    [.t(.name)],
-                ],
-            ],
-            start: 0
-        )
+    static let grammar = Grammar<Token>(
+        productions: [
+            // (0) Goal   -> Expr
+            [[.nt(1), .t(.eof)]],
+            
+            // (1) Expr   -> Expr + Term
+            //             | Expr - Term
+            //             | Term
+            [[.nt(1), .t(.plus), .nt(2)],
+             [.nt(1), .t(.minus), .nt(2)],
+             [.nt(2)]],
+            
+            // (2) Term   -> Term x Factor
+            //             | Term / Factor
+            //             | Factor
+            [[.nt(2), .t(.multiply), .nt(3)],
+             [.nt(2), .t(.divide), .nt(3)],
+             [.nt(3)]],
+            
+            // (3) Factor -> ( Expr )
+            //             | num
+            //             | name
+            [[.t(.leftBracket), .nt(1), .t(.rightBracket)],
+             [.t(.num)],
+             [.t(.name)]]
+        ],
+        start: 0
+    )
+    
+    static let valid: [[Token]] = [
+        [.num, .eof],
+        [.num, .plus, .name, .eof],
+        [.leftBracket, .num, .plus, .num, .rightBracket, .eof],
+    ]
+    
+    static let invalid: [[Token]] = [
+        // missing eof
+        [.num],
+        // unbalanced brackets
+        [.leftBracket, .leftBracket, .rightBracket, .num, .rightBracket, .eof],
+        // name followed by num
+        [.name, .num, .eof],
+    ]
+    
+    func testGrammar() {
+        var g = GrammarTests.grammar
         
         g.eliminateLeftRecursion()
         XCTAssertEqual(g.productions.count, 6)
@@ -90,6 +99,10 @@ final class GrammarTests: XCTestCase {
             ])
         
         XCTAssert(g.isBacktrackFree(nullable: nullable, first: first, follow: follow))
+    }
+    
+    func testLLParser() {
+        let g = GrammarTests.grammar
         
         let parser = LLParser(g)
         XCTAssertEqual(parser.table,
@@ -102,45 +115,29 @@ final class GrammarTests: XCTestCase {
                 [.rightBracket: 0, .minus: 0, .multiply: 1, .divide: 2, .plus: 0, .eof: 0]
             ])
         
-        XCTAssert(parser.parse([.num, .eof]))
-        XCTAssert(parser.parse([.num, .plus, .name, .eof]))
-        XCTAssert(parser.parse([.leftBracket, .num, .plus, .num, .rightBracket, .eof]))
-        
-        // missing eof
-        XCTAssertFalse(parser.parse([.num]))
-        
-        // unbalanced brackets
-        XCTAssertFalse(parser.parse([.leftBracket, .leftBracket, .rightBracket, .num, .rightBracket, .eof]))
-        
-        // name followed by num
-        XCTAssertFalse(parser.parse([.name, .num, .eof]))
-    }
-    
-    func testBacktrackingGrammar() {
-        enum Token: CustomStringConvertible {
-            case plus, minus, multiply, divide
-            case leftBracket, rightBracket
-            case comma
-            case num, name
-            case eof
-            
-            var description: String {
-                func q(_ s: String) -> String { return "\"\(s)\"" }
-                switch self {
-                case .plus: return q("+")
-                case .minus: return q("-")
-                case .multiply: return q("*")
-                case .divide: return q("/")
-                case .leftBracket: return q("(")
-                case .rightBracket: return q(")")
-                case .comma: return q(",")
-                case .name: return "name"
-                case .num: return "num"
-                case .eof: return "eof"
-                }
-            }
+        for s in GrammarTests.valid {
+            XCTAssert(parser.parse(s))
         }
         
+        for s in GrammarTests.invalid {
+            XCTAssertFalse(parser.parse(s))
+        }
+    }
+    
+    func testLRParser() {
+        let g = GrammarTests.grammar
+        let parser = LRParser(g)
+        
+        for s in GrammarTests.valid {
+            XCTAssert(parser.parse(s))
+        }
+        
+        for s in GrammarTests.invalid {
+            XCTAssertFalse(parser.parse(s))
+        }
+    }
+
+    func testBacktrackingGrammar() {
         var g = Grammar<Token>(productions:
             [
                 // (0) Goal   -> Expr
@@ -201,116 +198,5 @@ final class GrammarTests: XCTestCase {
         let newFirst = g.first(nullable: newNullable)
         let newFollow = g.follow(nullable: newNullable, first: newFirst)
         XCTAssert(g.isBacktrackFree(nullable: newNullable, first: newFirst, follow: newFollow))
-    }
-    
-    func testLRParser() {
-        enum Token: CustomStringConvertible {
-            func q(_ s: String) -> String { return "'\(s)'" }
-            case plus, multiply
-            case leftBracket, rightBracket
-            case int
-            case eof
-            
-            var description: String {
-                switch self {
-                case .plus: return q("+")
-                case .multiply: return q("*")
-                case .leftBracket: return q("(")
-                case .rightBracket: return q(")")
-                case .int: return "int"
-                case .eof: return "eof"
-                }
-            }
-        }
-        
-        let g = Grammar<Token>(productions:
-            [
-                // (0) E -> T | T + E
-                [[.nt(1)], [.nt(1), .t(.plus), .nt(0)]],
-                
-                // (1) T -> int | int * T | ( E )
-                [[.t(.int)], [.t(.int), .t(.multiply), .nt(1)], [.t(.leftBracket), .nt(0), .t(.rightBracket)]],
-            ],
-            start: 0
-        )
-        
-        let parser = LRParser(g)
-        XCTAssert(parser.parse([.int, .multiply, .int, .plus, .int]))
-    }
-    
-    func testLRParser2() {
-        enum Token: CustomStringConvertible {
-            case plus, minus, multiply, divide
-            case leftBracket, rightBracket
-            case num, name
-            case eof
-            
-            var description: String {
-                func q(_ s: String) -> String { return "\"\(s)\"" }
-                switch self {
-                case .plus: return q("+")
-                case .minus: return q("-")
-                case .multiply: return q("*")
-                case .divide: return q("/")
-                case .leftBracket: return q("(")
-                case .rightBracket: return q(")")
-                case .name: return "name"
-                case .num: return "num"
-                case .eof: return "eof"
-                }
-            }
-        }
-        
-        let g = Grammar<Token>(productions:
-            [
-                // (0) Goal   -> Expr
-                [
-                    [.nt(1), .t(.eof)],
-                    ],
-                
-                // (1) Expr   -> Expr + Term
-                //             | Expr - Term
-                //             | Term
-                [
-                    [.nt(1), .t(.plus), .nt(2)],
-                    [.nt(1), .t(.minus), .nt(2)],
-                    [.nt(2)],
-                    ],
-                
-                // (2) Term   -> Term x Factor
-                //             | Term / Factor
-                //             | Factor
-                [
-                    [.nt(2), .t(.multiply), .nt(3)],
-                    [.nt(2), .t(.divide), .nt(3)],
-                    [.nt(3)],
-                    ],
-                
-                // (3) Factor -> ( Expr )
-                //             | num
-                //             | name
-                [
-                    [.t(.leftBracket), .nt(1), .t(.rightBracket)],
-                    [.t(.num)],
-                    [.t(.name)],
-                    ],
-                ],
-                start: 0
-        )
-        
-        let parser = LRParser(g)
-        
-        XCTAssert(parser.parse([.num, .eof]))
-        XCTAssert(parser.parse([.num, .plus, .name, .eof]))
-        XCTAssert(parser.parse([.leftBracket, .num, .plus, .num, .rightBracket, .eof]))
-        
-        // missing eof
-        XCTAssertFalse(parser.parse([.num]))
-        
-        // unbalanced brackets
-        XCTAssertFalse(parser.parse([.leftBracket, .leftBracket, .rightBracket, .num, .rightBracket, .eof]))
-        
-        // name followed by num
-        XCTAssertFalse(parser.parse([.name, .num, .eof]))
     }
 }
