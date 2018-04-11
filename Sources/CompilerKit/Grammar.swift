@@ -114,14 +114,7 @@ struct Grammar<T: Hashable> {
             for s in 0..<productions.count {
                 for (pIdx, p) in productions[s].enumerated() {
                     // production is nullable iff all of its nodes are nullable (or production is empty)
-                    let isNullable = { () -> Bool in
-                        for node in p where !nodeIsNullabe(node) {
-                            return false
-                        }
-                        return true
-                    }()
-                    
-                    if isNullable {
+                    if !p.contains(where: { !nodeIsNullabe($0) }) {
                         nullable[s].insert(pIdx)
                     }
                 }
