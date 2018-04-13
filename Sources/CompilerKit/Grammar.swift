@@ -7,6 +7,13 @@ struct Grammar<T: Hashable> {
     var productions: [[[Node<T>]]]
     var start: Int
     
+    var augmented: Grammar<T> {
+        var new = self
+        new.productions.append([[.nt(new.start)]])
+        new.start = new.productions.count - 1
+        return new
+    }
+    
     mutating func eliminateLeftRecursion() {
         for i in 0..<productions.count {
             if i > 0 {

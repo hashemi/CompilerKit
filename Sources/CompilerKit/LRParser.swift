@@ -23,16 +23,10 @@ struct LRParser<T: Hashable> {
     typealias Node = Grammar<T>.Node<T>
     
     let grammar: Grammar<T>
-    let goal: Int
     let dfa: DFA<Set<Action>, Node>
     
     init(_ g: Grammar<T>) {
-        var grammar = g
-        
-        // create a new goal that points to the provided goal
-        self.goal = grammar.productions.count
-        grammar.productions.append([[.nt(grammar.start)]])
-        self.grammar = grammar
+        grammar = g.augmented
         
         // construct the LR(0) state machine
         var items: [Item] = []
@@ -71,9 +65,9 @@ struct LRParser<T: Hashable> {
         }
         
         // add a final accepting state
-        let initial = nonterminalProductionStartingItems[goal][0]
+        let initial = nonterminalProductionStartingItems[grammar.start][0]
         let finalAccepting = items.count
-        transitions[.nt(goal)] = [(initial, finalAccepting)]
+        transitions[.nt(grammar.start)] = [(initial, finalAccepting)]
         accepting[finalAccepting] = .accept
         
         // add epsilon transitions between each nonterminal node and its productions
