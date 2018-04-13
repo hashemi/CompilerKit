@@ -219,4 +219,55 @@ final class GrammarTests: XCTestCase {
         let newFollow = g.follow(nullable: newNullable, first: newFirst)
         XCTAssert(g.isBacktrackFree(nullable: newNullable, first: newFirst, follow: newFollow))
     }
+    
+    func testLALR() {
+        enum Token: String, Hashable {
+            case lb, rb, id, plus, mult
+        }
+        typealias Item = LALRParser<Token>.Item
+        
+        let g = Grammar<Token>(productions: [
+                // E -> E + T | T
+                [[.nt(0), .t(.plus), .nt(1)], [.nt(1)]],
+                // T -> T * F | F
+                [[.nt(1), .t(.mult), .nt(2)], [.nt(2)]],
+                // F -> (E) | id
+                [[.t(.lb), .nt(0), .t(.rb)], [.t(.id)]],
+            ],
+                        start: 0)
+        
+        let parser = LALRParser(g)
+        
+        let expectedItemSets: Set<Set<LALRParser<Token>.Item>> =
+        Set([
+            [(1, 0, 2), (2, 0, 0), (2, 1, 0)],
+            [(1, 0, 0), (2, 0, 1), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0)],
+            [(0, 0, 1), (2, 0, 2)],
+            [(1, 0, 3)],
+            [(1, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0), (0, 0, 2)],
+            [(2, 0, 3)],
+            [(1, 0, 1), (0, 0, 3)],
+            [(1, 0, 0), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0), (3, 0, 0)],
+            [(0, 0, 1), (3, 0, 1)],
+            [(1, 1, 1)],
+            [(2, 1, 1)],
+            [(0, 1, 1), (1, 0, 1)]
+            ].map { Set($0.map(Item.init)) })
+        XCTAssertEqual(parser.itemSets(), expectedItemSets)
+        
+        let gotoSet = parser.goto([
+                Item(term: 3, production: 0, position: 1), // [E' -> E.]
+                Item(term: 0, production: 0, position: 1) // [E -> E. + T]
+            ], .t(.plus))
+        
+        let expectedGotoSet: Set<Item> = Set([
+            (0, 0, 2), // E -> E + .T
+            (1, 0, 0), // T -> .T * F
+            (1, 1, 0), // T -> .F
+            (2, 0, 0), // F -> .(E)
+            (2, 1, 0), // F -> .id
+            ].map(Item.init))
+        
+        XCTAssertEqual(gotoSet, expectedGotoSet)
+    }
 }
