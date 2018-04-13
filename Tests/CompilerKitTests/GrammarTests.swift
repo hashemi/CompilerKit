@@ -233,8 +233,8 @@ final class GrammarTests: XCTestCase {
             return Set(s.map(constructItemSet))
         }
         
-        func constructTransition(_ s: (Set<LALRParser<Token>.Item>, Int)) -> LALRParser<Token>.Transition {
-            return LALRParser<Token>.Transition(state: s.0, nt: s.1)
+        func constructTransition(_ s: Set<LALRParser<Token>.Item>, _ nt: Int) -> LALRParser<Token>.Transition {
+            return LALRParser<Token>.Transition(state: s, nt: nt)
         }
         
         func constructTransitionSet(_ s: [(Set<LALRParser<Token>.Item>, Int)]) -> Set<LALRParser<Token>.Transition> {
@@ -302,7 +302,7 @@ final class GrammarTests: XCTestCase {
         // In the conventions of the paper by DeRemer & Pennello (1982),
         // this is a transition (I4, E) - with state I4, nonterminal E.
         // This transition lands us in state I8 {[F -> ( E .)], [E -> E .+ T]}
-        let t = constructTransition((I[4], 0))
+        let t = constructTransition(I[4], 0)
         let drTerminals = parser.directRead(t)
         XCTAssertEqual(drTerminals, [.plus, .rb])
         
@@ -312,5 +312,19 @@ final class GrammarTests: XCTestCase {
         for (t, indirect) in indirectReads {
             XCTAssertEqual(parser.directRead(t), indirect)
         }
+        
+        let expectedFollowSets: [LALRParser<Token>.Transition: Set<Token>] = [
+            constructTransition(I[0], 0): [.plus],
+            constructTransition(I[0], 1): [.mult, .plus],
+            constructTransition(I[0], 2): [.mult, .plus],
+            constructTransition(I[4], 0): [.plus, .rb],
+            constructTransition(I[4], 1): [.mult, .plus, .rb],
+            constructTransition(I[4], 2): [.mult, .plus, .rb],
+            constructTransition(I[6], 1): [.mult, .plus, .rb],
+            constructTransition(I[6], 2): [.mult, .plus, .rb],
+            constructTransition(I[7], 2): [.mult, .plus, .rb],
+        ]
+        let followSets = parser.digraph(allTransitions, { parser.includes($0, allTransitions) }, { indirectReads[$0, default: []] })
+        XCTAssertEqual(expectedFollowSets, followSets)
     }
 }

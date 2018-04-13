@@ -132,6 +132,60 @@ struct LALRParser<T: Hashable> {
         return relations
     }
 
+    // 't' is (p, A) in DeRemer & Pennello's description of includes
+    func includes(_ t: Transition, _ allTransitions: Set<Transition>) -> Set<Transition> {
+        var includes: Set<Transition> = []
+        
+        func tailNullable(_ i: Item) -> Bool {
+            let prod = grammar.productions[i.term][i.production]
+            
+            // if item is last in a production, the tail is empty
+            // and therefore is nullable
+            guard i.position < prod.count else { return true }
+            
+            let nodes = prod[i.position..<prod.count]
+            
+            for n in nodes {
+                switch n {
+                case .t(_): return false
+                case let .nt(nt): if !nullable[nt].isEmpty { return false }
+                }
+            }
+            return true
+        }
+        
+        // check every other transtion for being in t's includes
+        // 'pre' is (p', B) in DeRemer & Pennello's description of includes
+        for pre in allTransitions {
+            // find items that reduce to B as candidates for [B -> β A ɣ]
+            for initialItem in pre.state where initialItem.term == pre.nt {
+                // check all possible (q, C) transitions we can take from this item
+                // is our 't' one of them?
+                var item = initialItem
+                var q = pre.state
+                while let node = grammar[item] {
+                    if case let .nt(nt) = node {
+                        if Transition(state: q, nt: nt) == t {
+                            // we just got to (p, A) from 'pre'
+                            // this means that this item is [B -> β .A ɣ]
+                            // if ɣ is nullable, the (p, A) includes (p', B)
+                            // i.e., 't' includes 'pre'
+                            if tailNullable(item.next) {
+                                includes.insert(pre)
+                            }
+                        }
+                    }
+                    
+                    q = goto(q, node)
+                    item = item.next
+                }
+                
+            }
+        }
+        
+        return includes
+    }
+    
     func digraph<Input: Hashable, Output: Hashable>(
         _ input: Set<Input>,
         _ relation: @escaping (Input) -> (Set<Input>),
