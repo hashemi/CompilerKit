@@ -233,11 +233,11 @@ final class GrammarTests: XCTestCase {
             return Set(s.map(constructItemSet))
         }
         
-        func constructTransition(_ s: ([(Int, Int, Int)], Int)) -> LALRParser<Token>.Transition {
-            return LALRParser<Token>.Transition(state: constructItemSet(s.0), nt: s.1)
+        func constructTransition(_ s: (Set<LALRParser<Token>.Item>, Int)) -> LALRParser<Token>.Transition {
+            return LALRParser<Token>.Transition(state: s.0, nt: s.1)
         }
         
-        func constructTransitionSet(_ s: [([(Int, Int, Int)], Int)]) -> Set<LALRParser<Token>.Transition> {
+        func constructTransitionSet(_ s: [(Set<LALRParser<Token>.Item>, Int)]) -> Set<LALRParser<Token>.Transition> {
             return Set(s.map(constructTransition))
         }
         
@@ -261,53 +261,40 @@ final class GrammarTests: XCTestCase {
         
         let parser = LALRParser(g)
         
+        // Item sets in an ordered array in the same order as the Dragon book
+        // See Fig 4.35 in Dragon book for list of items (I0 to I11)
+        let I = [
+            /* I0  */ [(1, 0, 0), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0), (3, 0, 0)],
+            /* I1  */ [(0, 0, 1), (3, 0, 1)],
+            /* I2  */ [(0, 1, 1), (1, 0, 1)],
+            /* I3  */ [(1, 1, 1)],
+            /* I4  */ [(1, 0, 0), (2, 0, 1), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0)],
+            /* I5  */ [(2, 1, 1)],
+            /* I6  */ [(1, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0), (0, 0, 2)],
+            /* I7  */ [(1, 0, 2), (2, 0, 0), (2, 1, 0)],
+            /* I8  */ [(0, 0, 1), (2, 0, 2)],
+            /* I9  */ [(1, 0, 1), (0, 0, 3)],
+            /* I10 */ [(1, 0, 3)],
+            /* I11 */ [(2, 0, 3)],
+        ].map(constructItemSet)
+        
         // The LR(0) item sets or "canonical set of LR(0) items"
-        // See Fig 4.35 in the Dragon book for a list of those states (I0 to I11)
         let itemSets = parser.itemSets()
-        let expectedItemSets =
-        constructItemSets([
-            [(1, 0, 2), (2, 0, 0), (2, 1, 0)],
-            [(1, 0, 0), (2, 0, 1), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0)],
-            [(0, 0, 1), (2, 0, 2)],
-            [(1, 0, 3)],
-            [(1, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0), (0, 0, 2)],
-            [(2, 0, 3)],
-            [(1, 0, 1), (0, 0, 3)],
-            [(1, 0, 0), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0), (3, 0, 0)],
-            [(0, 0, 1), (3, 0, 1)],
-            [(1, 1, 1)],
-            [(2, 1, 1)],
-            [(0, 1, 1), (1, 0, 1)]
-            ])
+        let expectedItemSets = Set(I)
         XCTAssertEqual(itemSets, expectedItemSets)
         
-        // goto from state I1 by token '+'...
-        let gotoSet = parser.goto(constructItemSet([
-                (3, 0, 1), // [E' -> E.]
-                (0, 0, 1) // [E -> E. + T]
-            ]), .t(.plus))
+        // goto from state I1 {[E' -> E.], [E -> E. + T]} by token '+'...
+        let gotoSet = parser.goto(I[1], .t(.plus))
         
         // ...and expect to land in state I6
-        let expectedGotoSet = constructItemSet([
-                (0, 0, 2), // E -> E + .T
-                (1, 0, 0), // T -> .T * F
-                (1, 1, 0), // T -> .F
-                (2, 0, 0), // F -> .(E)
-                (2, 1, 0), // F -> .id
-            ])
-        XCTAssertEqual(gotoSet, expectedGotoSet)
+        XCTAssertEqual(gotoSet, I[6])
         
         let allTransitions = parser.allTransitions(itemSets)
         let expectedTransitions = constructTransitionSet([
-            ([(1, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0), (0, 0, 2)], 2),
-            ([(1, 0, 0), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0), (3, 0, 0)], 2),
-            ([(1, 0, 2), (2, 0, 0), (2, 1, 0)], 2),
-            ([(1, 0, 0), (2, 0, 1), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0)], 1),
-            ([(1, 0, 0), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0), (3, 0, 0)], 1),
-            ([(1, 0, 0), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0), (3, 0, 0)], 0),
-            ([(1, 0, 0), (2, 0, 1), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0)], 0),
-            ([(1, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0), (0, 0, 2)], 1),
-            ([(1, 0, 0), (2, 0, 1), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0)], 2),
+            (I[0], 0), (I[0], 1), (I[0], 2),
+            (I[4], 0), (I[4], 1), (I[4], 2),
+            (I[6], 1), (I[6], 2),
+            (I[7], 2),
         ])
         
         XCTAssertEqual(allTransitions, expectedTransitions)
@@ -315,7 +302,7 @@ final class GrammarTests: XCTestCase {
         // In the conventions of the paper by DeRemer & Pennello (1982),
         // this is a transition (I4, E) - with state I4, nonterminal E.
         // This transition lands us in state I8 {[F -> ( E .)], [E -> E .+ T]}
-        let t = constructTransition(([(1, 0, 0), (2, 0, 1), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0)], 0))
+        let t = constructTransition((I[4], 0))
         let drTerminals = parser.directRead(t)
         XCTAssertEqual(drTerminals, [.plus, .rb])
         
