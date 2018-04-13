@@ -15,6 +15,7 @@ Since this project is under active development, it's very likely that the follow
 - Grammar (`Grammar`).
 - LL parser (`LLParser`).
 - SLR parser (`LRParser`).
+- LALR parser (`LALRParser`) — _in progress_.
 
 ### Functions/Algorithms
 
@@ -28,7 +29,7 @@ Since this project is under active development, it's very likely that the follow
 - Perform left refactoring to eliminate backtracking.
 - Check if a grammar is backtracking-free.
 - Generate a table-driven LL(1) parser from a backtracking-free grammar, which reports whether an input was accepted or rejected.
-- Generate an NFA-backed SLR parser from a grammar, which reports whether an input was accepted or rejected.
+- Generate an DFA-backed SLR parser from a grammar, which reports whether an input was accepted or rejected.
 
 ## Example
 
@@ -61,7 +62,7 @@ See `Tests/CompilerKitTests/CompilerKitTests.swift` for more usage.
 
 ## See Also
 
-### Resources guiding this project
+### Resources Used
 
 1. [Engineering a Compiler](https://www.cs.rice.edu/~keith/Errata.html) 2nd ed by Keith Cooper and Linda Torczon.
 
@@ -69,9 +70,11 @@ See `Tests/CompilerKitTests/CompilerKitTests.swift` for more usage.
 
 3. [Stanford's Compilers Course](https://lagunita.stanford.edu/courses/Engineering/Compilers/Fall2014/about) by Alex Aiken.
 
-4. [Modern Compiler Implementation in C](https://www.cs.princeton.edu/~appel/modern/c/) by Maia Ginsburg and Andrew W. Appel.
+4. [Compilers: Principles, Techniques, and Tools](https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools) by  Alfred V. Aho, Monica S. Lam, Ravi Sethi, and Jeffrey D. Ullman.
 
-5. [Modern Compiler Implementation in ML](https://www.cs.princeton.edu/~appel/modern/ml/) by Andrew W. Appel.
+5. [Efficient Computation of LALR(1) Look-Ahead Sets](https://dl.acm.org/citation.cfm?id=357187) by Frank DeRemer and Thomas Pennello.
+
+6. [Modern Compiler Implementation in C](https://www.cs.princeton.edu/~appel/modern/c/) by Maia Ginsburg and Andrew W. Appel.
 
 ### My other projects, leading up to this
 
