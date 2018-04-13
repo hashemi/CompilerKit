@@ -116,4 +116,53 @@ struct LALRParser<T: Hashable> {
         
         return terminals
     }
+    
+    func reads(_ t: Transition) -> Set<Transition> {
+        var relations: Set<Transition> = []
+        
+        let g = goto(t.state, .nt(t.nt))
+        for i in g {
+            guard case let .nt(nt)? = grammar[i.next] else { continue }
+            
+            if !nullable[nt].isEmpty {
+                relations.insert(Transition(state: g, nt: nt))
+            }
+        }
+        
+        return relations
+    }
+
+    func digraph<Input: Hashable, Output: Hashable>(
+        _ input: Set<Input>,
+        _ relation: @escaping (Input) -> (Set<Input>),
+        _ fp: @escaping (Input) -> (Set<Output>)) -> [Input: Set<Output>] {
+        
+        var stack: [Input] = []
+        var result: [Input: Set<Output>] = [:]
+        var n = Dictionary(uniqueKeysWithValues: input.map { ($0, 0) })
+        
+        func traverse(_ x: Input) {
+            stack.append(x)
+            let d = stack.count
+            n[x] = d
+            result[x] = fp(x)
+            for y in relation(x) {
+                if n[y] == 0 { traverse(y) }
+                n[x] = min(n[x]!, n[y]!)
+                result[x]!.formUnion(result[y]!)
+            }
+            if n[x] == d {
+                repeat {
+                    n[stack.last!] = Int.max
+                    result[stack.last!] = result[x]
+                } while stack.popLast() != x
+            }
+        }
+        
+        for x in input where n[x] == 0 {
+            traverse(x)
+        }
+        
+        return result
+    }
 }

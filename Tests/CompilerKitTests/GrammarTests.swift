@@ -318,5 +318,12 @@ final class GrammarTests: XCTestCase {
         let t = constructTransition(([(1, 0, 0), (2, 0, 1), (0, 1, 0), (0, 0, 0), (2, 0, 0), (1, 1, 0), (2, 1, 0)], 0))
         let drTerminals = parser.directRead(t)
         XCTAssertEqual(drTerminals, [.plus, .rb])
+        
+        // Without nullable terms, the 'reads' relationship is identical to direct read
+        // TODO: test this with a grammar that has nullable rules
+        let indirectReads = parser.digraph(allTransitions, parser.reads, parser.directRead)
+        for (t, indirect) in indirectReads {
+            XCTAssertEqual(parser.directRead(t), indirect)
+        }
     }
 }
