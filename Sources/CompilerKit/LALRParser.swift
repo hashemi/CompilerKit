@@ -7,6 +7,8 @@ private extension Grammar {
 }
 
 struct LALRParser<T: Hashable> {
+    typealias Node = Grammar<T>.Node<T>
+    
     struct Item: Hashable {
         let term: Int
         let production: Int
@@ -17,7 +19,11 @@ struct LALRParser<T: Hashable> {
         }
     }
     
-    typealias Node = Grammar<T>.Node<T>
+    // (p, A) where p is state and A is nt
+    struct Transition: Hashable {
+        let state: Set<Item>
+        let nt: Int
+    }
     
     let grammar: Grammar<T>
     let nullable: [Set<Int>]
@@ -53,14 +59,18 @@ struct LALRParser<T: Hashable> {
     }
     
     func goto(_ I: Set<Item>, _ X: Node) -> Set<Item> {
-        var newI: Set<Item> = []
+        var G: Set<Item> = []
         for i in I {
             if let node = grammar[i], node == X {
-                newI.insert(i.next)
+                G.insert(i.next)
             }
         }
         
-        return closure(newI)
+        return closure(G)
+    }
+    
+    func goto(_ t: Transition) -> Set<Item> {
+        return goto(t.state, .nt(t.nt))
     }
     
     func itemSets() -> Set<Set<Item>> {
@@ -78,5 +88,32 @@ struct LALRParser<T: Hashable> {
         }
         
         return C
+    }
+    
+    func allTransitions(_ itemSets: Set<Set<Item>>) -> Set<Transition> {
+        var transitions: Set<Transition> = []
+        
+        for itemSet in itemSets {
+            for i in itemSet {
+                if case let .nt(nt)? = grammar[i] {
+                    transitions.insert(Transition(state: itemSet, nt: nt))
+                }
+            }
+        }
+        
+        return transitions
+    }
+    
+    func directRead(_ t: Transition) -> Set<T> {
+        var terminals: Set<T> = []
+        
+        let G = goto(t)
+        for i in G {
+            if case let .t(terminal)? = grammar[i] {
+                terminals.insert(terminal)
+            }
+        }
+        
+        return terminals
     }
 }
