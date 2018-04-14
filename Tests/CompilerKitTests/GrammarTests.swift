@@ -326,5 +326,27 @@ final class GrammarTests: XCTestCase {
         ]
         let followSets = parser.digraph(allTransitions, { parser.includes($0, allTransitions) }, { indirectReads[$0, default: []] })
         XCTAssertEqual(expectedFollowSets, followSets)
+        
+        // make a list of all possible reduction items: [A -> w.]
+        var reductions: [LALRParser<Token>.Item] = []
+        let prods = parser.grammar.productions
+        for term in 0..<prods.count {
+            for production in 0..<prods[term].count {
+                reductions.append(.init(term: term, production: production, position: prods[term][production].count))
+            }
+        }
+        
+        let lookbacks = reductions.map { parser.lookback($0, allTransitions) }
+        let expectedLookbacks: [Set<LALRParser<Token>.Transition>] = [
+            constructTransitionSet([(I[4], 0), (I[0], 0)]),
+            constructTransitionSet([(I[4], 0), (I[0], 0)]),
+            constructTransitionSet([(I[6], 1), (I[4], 1), (I[0], 1)]),
+            constructTransitionSet([(I[6], 1), (I[4], 1), (I[0], 1)]),
+            constructTransitionSet([(I[6], 2), (I[0], 2), (I[7], 2), (I[4], 2)]),
+            constructTransitionSet([(I[6], 2), (I[0], 2), (I[7], 2), (I[4], 2)]),
+            [],
+        ]
+        
+        XCTAssertEqual(lookbacks, expectedLookbacks)
     }
 }
