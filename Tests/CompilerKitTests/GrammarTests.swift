@@ -343,5 +343,23 @@ final class GrammarTests: XCTestCase {
         ]
         
         XCTAssertEqual(lookbacks, expectedLookbacks)
+        
+        let lookaheads: [Set<Token>] = reductions.map { state, reduction in
+            var la: Set<Token> = []
+            for transition in parser.lookback(state, reduction, allTransitions) {
+                la.formUnion(followSets[transition]!)
+            }
+            return la
+        }
+        let expectedLookaheads: [Set<Token>] = [
+            [.plus, .rb],
+            [.plus, .rb],
+            [.mult, .plus, .rb],
+            [.mult, .plus, .rb],
+            [.mult, .plus, .rb],
+            [.mult, .plus, .rb],
+            []
+        ]
+        XCTAssertEqual(lookaheads, expectedLookaheads)
     }
 }
