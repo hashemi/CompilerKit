@@ -214,8 +214,8 @@ struct LALRParser<T: Hashable> {
     
     func digraph<Input: Hashable, Output: Hashable>(
         _ input: Set<Input>,
-        _ relation: @escaping (Input) -> (Set<Input>),
-        _ fp: @escaping (Input) -> (Set<Output>)) -> [Input: Set<Output>] {
+        _ relation: [Input: Set<Input>],
+        _ fp: [Input: Set<Output>]) -> [Input: Set<Output>] {
         
         var stack: [Input] = []
         var result: [Input: Set<Output>] = [:]
@@ -225,8 +225,8 @@ struct LALRParser<T: Hashable> {
             stack.append(x)
             let d = stack.count
             n[x] = d
-            result[x] = fp(x)
-            for y in relation(x) {
+            result[x] = fp[x]!
+            for y in relation[x]! {
                 if n[y] == 0 { traverse(y) }
                 n[x] = min(n[x]!, n[y]!)
                 result[x]!.formUnion(result[y]!)

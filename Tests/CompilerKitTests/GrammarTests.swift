@@ -298,12 +298,17 @@ final class GrammarTests: XCTestCase {
         let drTerminals = parser.directRead(t)
         XCTAssertEqual(drTerminals, [.plus, .rb])
         
+        let reads = Dictionary(uniqueKeysWithValues: allTransitions.map {
+            ($0, parser.reads($0))
+        })
+        let directRead = Dictionary(uniqueKeysWithValues: allTransitions.map {
+            ($0, parser.directRead($0))
+        })
+        let indirectReads = parser.digraph(allTransitions, reads, directRead)
+
         // Without nullable terms, the 'reads' relationship is identical to direct read
         // TODO: test this with a grammar that has nullable rules
-        let indirectReads = parser.digraph(allTransitions, parser.reads, parser.directRead)
-        for (t, indirect) in indirectReads {
-            XCTAssertEqual(parser.directRead(t), indirect)
-        }
+        XCTAssertEqual(directRead, indirectReads)
         
         let expectedFollowSets: [LALRParser<Token>.Transition: Set<Token>] = [
             constructTransition(I[0], 0): [.plus],
@@ -316,7 +321,10 @@ final class GrammarTests: XCTestCase {
             constructTransition(I[6], 2): [.mult, .plus, .rb],
             constructTransition(I[7], 2): [.mult, .plus, .rb],
         ]
-        let followSets = parser.digraph(allTransitions, { parser.includes($0, allTransitions) }, { indirectReads[$0, default: []] })
+        let includes = Dictionary(uniqueKeysWithValues: allTransitions.map {
+            ($0, parser.includes($0, allTransitions))
+        })
+        let followSets = parser.digraph(allTransitions, includes, indirectReads)
         XCTAssertEqual(expectedFollowSets, followSets)
         
         // make a list of all possible reduction items: [A -> w.]
