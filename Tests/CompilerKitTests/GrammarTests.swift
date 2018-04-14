@@ -149,6 +149,19 @@ final class GrammarTests: XCTestCase {
         }
     }
 
+    func testLALRParserCorrectness() {
+        let g = GrammarTests.grammar
+        let parser = LALRParser(g)
+        
+        for s in GrammarTests.valid {
+            XCTAssert(parser.parse(s))
+        }
+
+        for s in GrammarTests.invalid {
+            XCTAssertFalse(parser.parse(s))
+        }
+    }
+
     func testBacktrackingGrammar() {
         var g = Grammar<Token>(productions:
             [

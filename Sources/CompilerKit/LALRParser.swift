@@ -212,6 +212,100 @@ struct LALRParser<T: Hashable> {
         return lookback
     }
     
+    func parse<S: Sequence>(_ elements: S) -> Bool where S.Element == T {
+        let itemSets = self.itemSets()
+        let allTransitions = self.allTransitions(itemSets)
+        
+        let directRead = Dictionary(uniqueKeysWithValues: allTransitions.map { t in
+            (t, self.directRead(t))
+        })
+
+        let transitionReads = Dictionary(uniqueKeysWithValues: allTransitions.map { t in
+            (t, self.reads(t))
+        })
+        
+        let reads = digraph(allTransitions, transitionReads, directRead)
+        
+        let transitionIncludes = Dictionary(uniqueKeysWithValues: allTransitions.map { t in
+            (t, self.includes(t, allTransitions))
+        })
+        
+        let follow = digraph(allTransitions, transitionIncludes, reads)
+        
+        // make a list of all possible reduction items: [A -> w.]
+        var reductions: [(Set<Item>, Item)] = []
+        let prods = grammar.productions
+        for term in 0..<prods.count {
+            for production in 0..<prods[term].count {
+                let r = Item(term: term, production: production, position: prods[term][production].count)
+                for state in itemSets where state.contains(r) {
+                    reductions.append((state, r))
+                }
+            }
+        }
+        
+        var lookbacks: [Set<Item>: [Item: Set<Transition>]] = [:]
+        for (state, reduction) in reductions {
+            lookbacks[state, default: [:]][reduction, default: []] = lookback(state, reduction, allTransitions)
+        }
+        
+        var lookaheads: [Set<Item>: [Item: Set<T>]] = [:]
+        for (state, reduction) in reductions {
+            lookaheads[state] = [reduction: []]
+            for transition in lookbacks[state]![reduction]! {
+                lookaheads[state]![reduction]!.formUnion(follow[transition]!)
+            }
+        }
+        
+        // "we have a parser."
+        // now let's use it...
+        let initialState = itemSets.first(where: { $0.contains(startItem) })!
+        var stack: [Node] = []
+        var it = elements.makeIterator()
+        
+        var lookahead = it.next()
+        func advance() -> T? {
+            let current = lookahead
+            lookahead = it.next()
+            return current
+        }
+        
+        while true {
+            // if the only thing in the stack is S' and lookahead is empty
+            // we've successfully parsed the input
+            if stack == [.nt(grammar.productions.count - 1)] && lookahead == nil {
+                return true
+            }
+            
+            var state = initialState
+            for n in stack {
+                state = goto(state, n)
+                // that was not a valid transition, parsing failed
+                if state.isEmpty { return false }
+            }
+            
+            // look for a valid reduction
+            let possibleReduction = lookaheads[state, default: [:]].first { (reduction, acceptedLAs) in
+                if let la = lookahead {
+                    return acceptedLAs.contains(la)
+                } else {
+                    // when lookahead is nil, we're at end of input
+                    // all reductions in a state are permitted
+                    return true
+                }
+                }?.0
+            
+            if let reduction = possibleReduction {
+                stack.removeLast(grammar.productions[reduction.term][reduction.production].count)
+                stack.append(.nt(reduction.term))
+            } else {
+                // shift
+                guard let t = advance() else { return false }
+                stack.append(.t(t))
+            }
+        }
+    }
+    
     func digraph<Input: Hashable, Output: Hashable>(
         _ input: Set<Input>,
         _ relation: [Input: Set<Input>],
