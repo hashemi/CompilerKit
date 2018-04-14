@@ -15,7 +15,7 @@ Since this project is under active development, it's very likely that the follow
 - Grammar (`Grammar`).
 - LL parser (`LLParser`).
 - SLR parser (`LRParser`).
-- LALR parser (`LALRParser`) — _in progress_.
+- LALR parser (`LALRParser`).
 
 ### Functions/Algorithms
 
@@ -30,6 +30,7 @@ Since this project is under active development, it's very likely that the follow
 - Check if a grammar is backtracking-free.
 - Generate a table-driven LL(1) parser from a backtracking-free grammar, which reports whether an input was accepted or rejected.
 - Generate an DFA-backed SLR parser from a grammar, which reports whether an input was accepted or rejected.
+- Construct an LALR parser from a grammar using the DeRemer and Pennello algorithm, which reports whether an input was accepted or rejected.
 
 ## Example
 
@@ -58,7 +59,7 @@ Since this project is under active development, it's very likely that the follow
     minimizedDfa.match("1xy")      // .unknown
 ```
 
-See `Tests/CompilerKitTests/CompilerKitTests.swift` for more usage.
+See the tests for more usage examples.
 
 ## See Also
 
