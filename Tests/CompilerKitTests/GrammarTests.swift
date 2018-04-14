@@ -320,15 +320,18 @@ final class GrammarTests: XCTestCase {
         XCTAssertEqual(expectedFollowSets, followSets)
         
         // make a list of all possible reduction items: [A -> w.]
-        var reductions: [LALRParser<Token>.Item] = []
+        var reductions: [(Set<LALRParser<Token>.Item>, LALRParser<Token>.Item)] = []
         let prods = parser.grammar.productions
         for term in 0..<prods.count {
             for production in 0..<prods[term].count {
-                reductions.append(.init(term: term, production: production, position: prods[term][production].count))
+                let r = LALRParser<Token>.Item(term: term, production: production, position: prods[term][production].count)
+                for state in itemSets where state.contains(r) {
+                    reductions.append((state, r))
+                }
             }
         }
         
-        let lookbacks = reductions.map { parser.lookback($0, allTransitions) }
+        let lookbacks = reductions.map { state, reduction in parser.lookback(state, reduction, allTransitions) }
         let expectedLookbacks: [Set<LALRParser<Token>.Transition>] = [
             constructTransitionSet([(I[4], 0), (I[0], 0)]),
             constructTransitionSet([(I[4], 0), (I[0], 0)]),

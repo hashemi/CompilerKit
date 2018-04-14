@@ -186,11 +186,12 @@ struct LALRParser<T: Hashable> {
         return includes
     }
     
-    func lookback(_ reduction: Item, _ allTransitions: Set<Transition>) -> Set<Transition> {
+    func lookback(_ q: Set<Item>, _ reduction: Item, _ allTransitions: Set<Transition>) -> Set<Transition> {
         let w = grammar.productions[reduction.term][reduction.production]
         // a reduction is represented by an item with the dot in the far right
         // [A -> w.]
         precondition(reduction.position == w.count)
+        precondition(q.contains(reduction))
         
         var lookback: Set<Transition> = []
         
@@ -202,8 +203,8 @@ struct LALRParser<T: Hashable> {
                 g = goto(g, n)
             }
             
-            // if this was a valid path, we should find our reduction item in g
-            if g.contains(reduction) {
+            // if this was a valid path, we will find ourselves at q
+            if g == q {
                 lookback.insert(t)
             }
         }
