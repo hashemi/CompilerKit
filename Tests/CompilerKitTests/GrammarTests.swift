@@ -104,9 +104,7 @@ final class GrammarTests: XCTestCase {
     func testLLParserConstruction() {
         let g = GrammarTests.grammar
         
-        measure {
-            _ = LLParser(g)
-        }
+        _ = LLParser(g)
         
         let parser = LLParser(g)
         XCTAssertEqual(parser.table,
@@ -124,36 +122,30 @@ final class GrammarTests: XCTestCase {
         let g = GrammarTests.grammar
         let parser = LLParser(g)
         
-        measure {
-            for s in GrammarTests.valid {
-                XCTAssert(parser.parse(s))
-            }
-            
-            for s in GrammarTests.invalid {
-                XCTAssertFalse(parser.parse(s))
-            }
+        for s in GrammarTests.valid {
+            XCTAssert(parser.parse(s))
+        }
+        
+        for s in GrammarTests.invalid {
+            XCTAssertFalse(parser.parse(s))
         }
     }
     
     func testLRConstruction() {
         let g = GrammarTests.grammar
-        measure {
-            _ = LRParser(g)
-        }
+        _ = LRParser(g)
     }
 
     func testLRParserCorrectness() {
         let g = GrammarTests.grammar
         let parser = LRParser(g)
 
-        measure {
-            for s in GrammarTests.valid {
-                XCTAssert(parser.parse(s))
-            }
-            
-            for s in GrammarTests.invalid {
-                XCTAssertFalse(parser.parse(s))
-            }
+        for s in GrammarTests.valid {
+            XCTAssert(parser.parse(s))
+        }
+        
+        for s in GrammarTests.invalid {
+            XCTAssertFalse(parser.parse(s))
         }
     }
 
