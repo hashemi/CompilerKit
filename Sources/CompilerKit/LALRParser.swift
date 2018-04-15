@@ -25,6 +25,13 @@ struct LALRParser<T: Hashable> {
         let nt: Int
     }
     
+    enum Action: Hashable {
+        case shift
+        case reduce(Int, Int, Set<T>)
+        case accept
+        case error
+    }
+    
     let grammar: Grammar<T>
     
     init(_ g: Grammar<T>) {
@@ -245,9 +252,62 @@ struct LALRParser<T: Hashable> {
             }
         }
         
+        // now we (very inefficiently) build a DFA out of that
+        let orderedItemSets = Array(itemSets)
+        func state(for itemSet: Set<Item>) -> Int {
+            return orderedItemSets.index(of: itemSet)!
+        }
+        
+        let startState = state(for: LALRParser.closure(grammar, [startItem]))
+        let finalState = state(for: [Item(term: grammar.productions.count - 1, production: 0, position: 1)])
+        
+        var transitions: [Node: [(Int, Int)]] = [:]
+        for from in itemSets {
+            for x in allNodes {
+                let to = LALRParser.goto(grammar, from, x)
+                if !to.isEmpty {
+                    transitions[x, default: []].append((state(for: from), state(for: to)))
+                }
+            }
+        }
+        
+        var accepting: [Int: Set<Action>] = [:]
+        for itemSet in itemSets {
+            let s = state(for: itemSet)
+            
+            // if this is a final state, accept, cannot do anything else
+            if s == finalState {
+                accepting[s] = [.accept]
+                continue
+            }
+            
+            if let possibleReductions = lookaheads[itemSet] {
+                for (reduction, allowedLookaheads) in possibleReductions {
+                    accepting[s, default: []].insert(.reduce(reduction.term, reduction.position, allowedLookaheads))
+                }
+                
+                // the item set also includes non-reduce items, so it can also shift
+                if itemSet.count > possibleReductions.count {
+                    accepting[s, default: []].insert(.shift)
+                }
+            } else {
+                // no reductions, so the only possible action here is to shift
+                accepting[s] = [.shift]
+            }
+        }
+        
+        // Can't currently build a DFA directly because DFA.Transition
+        // is problematic due to lack of generic covariance in Swift
+        let dfa = NFA(
+            states: itemSets.count,
+            transitions: transitions,
+            epsilonTransitions: [:],
+            initial: startState,
+            accepting: accepting
+        ).dfa.minimized
+        
         // "we have a parser."
         // now let's use it...
-        let initialState = itemSets.first(where: { $0.contains(startItem) })!
         var stack: [Node] = []
         var it = elements.makeIterator()
         
@@ -258,38 +318,56 @@ struct LALRParser<T: Hashable> {
             return current
         }
         
-        while true {
-            // if the only thing in the stack is S' and lookahead is empty
-            // we've successfully parsed the input
-            if stack == [.nt(grammar.productions.count - 1)] && lookahead == nil {
-                return true
-            }
-            
-            var state = initialState
-            for n in stack {
-                state = LALRParser.goto(grammar, state, n)
-                // that was not a valid transition, parsing failed
-                if state.isEmpty { return false }
-            }
-            
-            // look for a valid reduction
-            let possibleReduction = lookaheads[state, default: [:]].first { (reduction, acceptedLAs) in
-                if let la = lookahead {
-                    return acceptedLAs.contains(la)
-                } else {
-                    // when lookahead is nil, we're at end of input
-                    // all reductions in a state are permitted
-                    return true
-                }
-                }?.0
-            
-            if let reduction = possibleReduction {
-                stack.removeLast(grammar.productions[reduction.term][reduction.production].count)
-                stack.append(.nt(reduction.term))
-            } else {
-                // shift
+        func perform(_ action: Action) -> Bool {
+            switch action {
+            case .shift:
                 guard let t = advance() else { return false }
                 stack.append(.t(t))
+            case let .reduce(nt, size, _):
+                stack.removeLast(size)
+                stack.append(.nt(nt))
+            case .accept:
+                guard lookahead == nil else { return false }
+            case .error:
+                return false
+            }
+            
+            return true
+        }
+        
+        while true {
+            let actions = dfa.match(stack).first ?? [.error]
+            let action: Action
+            
+            switch actions.count {
+            case 0: action = .error
+            case 1: action = actions.first!
+            default:
+                // we have a reduce/reduce or shift/reduce conflict
+                // is there any viable reduce among the possible actions?
+                let viableReduce = actions.first { action in
+                    if case let .reduce(_, _, la) = action {
+                        if let lookahead = lookahead {
+                            return la.contains(lookahead)
+                        }
+                        return true
+                    }
+                    return false
+                }
+                
+                if let reduce = viableReduce {
+                    action = reduce
+                } else if actions.contains(.shift) {
+                    action = .shift
+                } else {
+                    action = .error
+                }
+            }
+            
+            if perform(action) {
+                if action == .accept { return true }
+            } else {
+                return false
             }
         }
     }
