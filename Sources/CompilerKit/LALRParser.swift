@@ -26,21 +26,12 @@ struct LALRParser<T: Hashable> {
     }
     
     let grammar: Grammar<T>
-    let nullable: [Set<Int>]
-    
-    var startItem: Item {
-        return Item(term: grammar.productions.count - 1, production: 0, position: 0)
-    }
-    
-    let allNodes: Set<Node>
     
     init(_ g: Grammar<T>) {
         grammar = g.augmented
-        self.nullable = grammar.nullable()
-        self.allNodes = Set(grammar.productions.flatMap { $0.flatMap { $0 } })
     }
     
-    func closure(_ I: Set<Item>) -> Set<Item> {
+    static func closure(_ grammar: Grammar<T>, _ I: Set<Item>) -> Set<Item> {
         var J = I
         var lastCount: Int
         repeat {
@@ -58,7 +49,7 @@ struct LALRParser<T: Hashable> {
         return J
     }
     
-    func goto(_ I: Set<Item>, _ X: Node) -> Set<Item> {
+    static func goto(_ grammar: Grammar<T>, _ I: Set<Item>, _ X: Node) -> Set<Item> {
         var G: Set<Item> = []
         for i in I {
             if let node = grammar[i], node == X {
@@ -66,22 +57,22 @@ struct LALRParser<T: Hashable> {
             }
         }
         
-        return closure(G)
+        return closure(grammar, G)
     }
     
-    func goto(_ t: Transition) -> Set<Item> {
-        return goto(t.state, .nt(t.nt))
+    static func goto(_ grammar: Grammar<T>, _ t: Transition) -> Set<Item> {
+        return goto(grammar, t.state, .nt(t.nt))
     }
     
-    func itemSets() -> Set<Set<Item>> {
-        var C: Set<Set<Item>> = [closure([startItem])]
+    static func itemSets(_ grammar: Grammar<T>, _ startItem: Item, _ allNodes: Set<Node>) -> Set<Set<Item>> {
+        var C: Set<Set<Item>> = [closure(grammar, [startItem])]
         
         var lastCount = 0
         while lastCount != C.count {
             lastCount = C.count
             for I in C {
                 for x in allNodes {
-                    let g = goto(I, x)
+                    let g = goto(grammar, I, x)
                     if !g.isEmpty { C.insert(g) }
                 }
             }
@@ -90,7 +81,7 @@ struct LALRParser<T: Hashable> {
         return C
     }
     
-    func allTransitions(_ itemSets: Set<Set<Item>>) -> Set<Transition> {
+    static func allTransitions(_ grammar: Grammar<T>, _ itemSets: Set<Set<Item>>) -> Set<Transition> {
         var transitions: Set<Transition> = []
         
         for itemSet in itemSets {
@@ -104,10 +95,10 @@ struct LALRParser<T: Hashable> {
         return transitions
     }
     
-    func directRead(_ t: Transition) -> Set<T> {
+    static func directRead(_ grammar: Grammar<T>, _ t: Transition) -> Set<T> {
         var terminals: Set<T> = []
         
-        let G = goto(t)
+        let G = goto(grammar, t)
         for i in G {
             if case let .t(terminal)? = grammar[i] {
                 terminals.insert(terminal)
@@ -117,10 +108,10 @@ struct LALRParser<T: Hashable> {
         return terminals
     }
     
-    func reads(_ t: Transition) -> Set<Transition> {
+    static func reads(_ grammar: Grammar<T>, _ nullable: [Set<Int>], _ t: Transition) -> Set<Transition> {
         var relations: Set<Transition> = []
         
-        let g = goto(t.state, .nt(t.nt))
+        let g = goto(grammar, t)
         for i in g {
             guard case let .nt(nt)? = grammar[i.next] else { continue }
             
@@ -133,7 +124,7 @@ struct LALRParser<T: Hashable> {
     }
 
     // 't' is (p, A) in DeRemer & Pennello's description of includes
-    func includes(_ t: Transition, _ allTransitions: Set<Transition>) -> Set<Transition> {
+    static func includes(_ grammar: Grammar<T>, _ nullable: [Set<Int>], _ t: Transition, _ allTransitions: Set<Transition>) -> Set<Transition> {
         var includes: Set<Transition> = []
         
         func tailNullable(_ i: Item) -> Bool {
@@ -176,7 +167,7 @@ struct LALRParser<T: Hashable> {
                         }
                     }
                     
-                    q = goto(q, node)
+                    q = goto(grammar, q, node)
                     item = item.next
                 }
                 
@@ -186,7 +177,7 @@ struct LALRParser<T: Hashable> {
         return includes
     }
     
-    func lookback(_ q: Set<Item>, _ reduction: Item, _ allTransitions: Set<Transition>) -> Set<Transition> {
+    static func lookback(_ grammar: Grammar<T>, _ q: Set<Item>, _ reduction: Item, _ allTransitions: Set<Transition>) -> Set<Transition> {
         let w = grammar.productions[reduction.term][reduction.production]
         // a reduction is represented by an item with the dot in the far right
         // [A -> w.]
@@ -200,7 +191,7 @@ struct LALRParser<T: Hashable> {
             // check if we can spell a path from t.state (p) to (q) using w
             var g = t.state
             for n in w {
-                g = goto(g, n)
+                g = goto(grammar, g, n)
             }
             
             // if this was a valid path, we will find ourselves at q
@@ -213,24 +204,27 @@ struct LALRParser<T: Hashable> {
     }
     
     func parse<S: Sequence>(_ elements: S) -> Bool where S.Element == T {
-        let itemSets = self.itemSets()
-        let allTransitions = self.allTransitions(itemSets)
+        let startItem = Item(term: grammar.productions.count - 1, production: 0, position: 0)
+        let allNodes = Set(grammar.productions.flatMap { $0.flatMap { $0 } })
+        let nullable = grammar.nullable()
+        let itemSets = LALRParser.itemSets(grammar, startItem, allNodes)
+        let allTransitions = LALRParser.allTransitions(grammar, itemSets)
         
         let directRead = Dictionary(uniqueKeysWithValues: allTransitions.map { t in
-            (t, self.directRead(t))
+            (t, LALRParser.directRead(grammar, t))
         })
 
         let transitionReads = Dictionary(uniqueKeysWithValues: allTransitions.map { t in
-            (t, self.reads(t))
+            (t, LALRParser.reads(grammar, nullable, t))
         })
         
-        let reads = digraph(allTransitions, transitionReads, directRead)
+        let reads = LALRParser.digraph(allTransitions, transitionReads, directRead)
         
         let transitionIncludes = Dictionary(uniqueKeysWithValues: allTransitions.map { t in
-            (t, self.includes(t, allTransitions))
+            (t, LALRParser.includes(grammar, nullable, t, allTransitions))
         })
         
-        let follow = digraph(allTransitions, transitionIncludes, reads)
+        let follow = LALRParser.digraph(allTransitions, transitionIncludes, reads)
         
         // make a list of all possible reduction items: [A -> w.]
         var reductions: [(Set<Item>, Item)] = []
@@ -246,7 +240,7 @@ struct LALRParser<T: Hashable> {
         
         var lookbacks: [Set<Item>: [Item: Set<Transition>]] = [:]
         for (state, reduction) in reductions {
-            lookbacks[state, default: [:]][reduction, default: []] = lookback(state, reduction, allTransitions)
+            lookbacks[state, default: [:]][reduction, default: []] = LALRParser.lookback(grammar, state, reduction, allTransitions)
         }
         
         var lookaheads: [Set<Item>: [Item: Set<T>]] = [:]
@@ -279,7 +273,7 @@ struct LALRParser<T: Hashable> {
             
             var state = initialState
             for n in stack {
-                state = goto(state, n)
+                state = LALRParser.goto(grammar, state, n)
                 // that was not a valid transition, parsing failed
                 if state.isEmpty { return false }
             }
@@ -306,7 +300,7 @@ struct LALRParser<T: Hashable> {
         }
     }
     
-    func digraph<Input: Hashable, Output: Hashable>(
+    static func digraph<Input: Hashable, Output: Hashable>(
         _ input: Set<Input>,
         _ relation: [Input: Set<Input>],
         _ fp: [Input: Set<Output>]) -> [Input: Set<Output>] {
