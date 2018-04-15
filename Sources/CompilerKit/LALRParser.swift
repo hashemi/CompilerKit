@@ -210,19 +210,13 @@ struct LALRParser<T: Hashable> {
         let itemSets = LALRParser.itemSets(grammar, startItem, allNodes)
         let allTransitions = LALRParser.allTransitions(grammar, itemSets)
         
-        let directRead = Dictionary(uniqueKeysWithValues: allTransitions.map { t in
-            (t, LALRParser.directRead(grammar, t))
-        })
+        let directRead = Dictionary(allTransitions) { LALRParser.directRead(grammar, $0) }
 
-        let transitionReads = Dictionary(uniqueKeysWithValues: allTransitions.map { t in
-            (t, LALRParser.reads(grammar, nullable, t))
-        })
+        let transitionReads = Dictionary(allTransitions) { LALRParser.reads(grammar, nullable, $0) }
         
         let reads = LALRParser.digraph(allTransitions, transitionReads, directRead)
         
-        let transitionIncludes = Dictionary(uniqueKeysWithValues: allTransitions.map { t in
-            (t, LALRParser.includes(grammar, nullable, t, allTransitions))
-        })
+        let transitionIncludes = Dictionary(allTransitions) { LALRParser.includes(grammar, nullable, $0, allTransitions) }
         
         let follow = LALRParser.digraph(allTransitions, transitionIncludes, reads)
         
@@ -307,7 +301,7 @@ struct LALRParser<T: Hashable> {
         
         var stack: [Input] = []
         var result: [Input: Set<Output>] = [:]
-        var n = Dictionary(uniqueKeysWithValues: input.map { ($0, 0) })
+        var n = Dictionary(input) { _ in 0 }
         
         func traverse(_ x: Input) {
             stack.append(x)

@@ -315,12 +315,8 @@ final class GrammarTests: XCTestCase {
         let drTerminals = LALRParser.directRead(parser.grammar, t)
         XCTAssertEqual(drTerminals, [.plus, .rb])
         
-        let reads = Dictionary(uniqueKeysWithValues: allTransitions.map {
-            ($0, LALRParser.reads(parser.grammar, nullable, $0))
-        })
-        let directRead = Dictionary(uniqueKeysWithValues: allTransitions.map {
-            ($0, LALRParser.directRead(parser.grammar, $0))
-        })
+        let reads = Dictionary(allTransitions) { LALRParser.reads(parser.grammar, nullable, $0) }
+        let directRead = Dictionary(allTransitions) { LALRParser.directRead(parser.grammar, $0) }
         let indirectReads = LALRParser<Token>.digraph(allTransitions, reads, directRead)
 
         // Without nullable terms, the 'reads' relationship is identical to direct read
@@ -338,9 +334,7 @@ final class GrammarTests: XCTestCase {
             constructTransition(I[6], 2): [.mult, .plus, .rb],
             constructTransition(I[7], 2): [.mult, .plus, .rb],
         ]
-        let includes = Dictionary(uniqueKeysWithValues: allTransitions.map {
-            ($0, LALRParser.includes(parser.grammar, nullable, $0, allTransitions))
-        })
+        let includes = Dictionary(allTransitions) { LALRParser.includes(parser.grammar, nullable, $0, allTransitions) }
         let followSets = LALRParser<Token>.digraph(allTransitions, includes, indirectReads)
         XCTAssertEqual(expectedFollowSets, followSets)
         
