@@ -32,10 +32,10 @@ struct LALRParser<T: Hashable> {
         case error
     }
     
-    let grammar: Grammar<T>
+    let dfa: DFA<Set<LALRParser.Action>, Node>
     
-    init(_ g: Grammar<T>) {
-        grammar = g.augmented
+    init(_ grammar: Grammar<T>) {
+        self.dfa = LALRParser.constructDfa(grammar)
     }
     
     static func closure(_ grammar: Grammar<T>, _ I: Set<Item>) -> Set<Item> {
@@ -210,7 +210,9 @@ struct LALRParser<T: Hashable> {
         return lookback
     }
     
-    func parse<S: Sequence>(_ elements: S) -> Bool where S.Element == T {
+    static func constructDfa(_ g: Grammar<T>) -> DFA<Set<Action>, Node> {
+        let grammar = g.augmented
+        
         let startItem = Item(term: grammar.productions.count - 1, production: 0, position: 0)
         let allNodes = Set(grammar.productions.flatMap { $0.flatMap { $0 } })
         let nullable = grammar.nullable()
@@ -296,18 +298,17 @@ struct LALRParser<T: Hashable> {
             }
         }
         
-        // Can't currently build a DFA directly because DFA.Transition
-        // is problematic due to lack of generic covariance in Swift
-        let dfa = NFA(
+        // "we have a parser."
+        return DFA(
             states: itemSets.count,
             transitions: transitions,
-            epsilonTransitions: [:],
             initial: startState,
-            accepting: accepting
-        ).dfa.minimized
-        
-        // "we have a parser."
-        // now let's use it...
+            accepting: accepting,
+            nonAcceptingValue: [Action.error]
+        ).minimized
+    }
+    
+    func parse<S: Sequence>(_ elements: S) -> Bool where S.Element == T {
         var stack: [Node] = []
         var it = elements.makeIterator()
         
@@ -336,7 +337,7 @@ struct LALRParser<T: Hashable> {
         }
         
         while true {
-            let actions = dfa.match(stack).first ?? [.error]
+            let actions = dfa.match(stack)
             let action: Action
             
             switch actions.count {
