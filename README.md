@@ -1,5 +1,7 @@
 # CompilerKit
 
+[![Build Status](https://travis-ci.org/hashemi/CompilerKit.svg?branch=master)](https://travis-ci.org/hashemi/CompilerKit)
+
 The goal of this project is to create a library of data structures and algorithms that can be used to build a compiler in Swift.
 
 ## Features
@@ -30,7 +32,7 @@ Since this project is under active development, it's very likely that the follow
 - Check if a grammar is backtracking-free.
 - Generate a table-driven LL(1) parser from a backtracking-free grammar, which reports whether an input was accepted or rejected.
 - Generate an DFA-backed SLR parser from a grammar, which reports whether an input was accepted or rejected.
-- Construct an LALR parser from a grammar using the DeRemer and Pennello algorithm, which reports whether an input was accepted or rejected.
+- Construct a DFA-backed LALR parser from a grammar using the DeRemer and Pennello algorithm, which reports whether an input was accepted or rejected.
 
 ## Example
 
