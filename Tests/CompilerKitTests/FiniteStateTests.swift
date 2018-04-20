@@ -38,9 +38,9 @@ final class FiniteStateTests: XCTestCase {
         let dfa = DFA<Bool, ScalarClass>(
             states: 2,
             transitions: [
-                DFA.Transition(from: 0, matcher: .single("a")): 1,
-                DFA.Transition(from: 1, matcher: .single("b")): 1,
-                DFA.Transition(from: 1, matcher: .single("c")): 1
+                ScalarClass.single("a"): [(0, 1)],
+                ScalarClass.single("b"): [(1, 1)],
+                ScalarClass.single("c"): [(1, 1)],
             ],
             initial: 0,
             accepting: [1: true],
@@ -110,10 +110,9 @@ final class FiniteStateTests: XCTestCase {
         let dfa = DFA<Token, ScalarClass>(
             states: 5,
             transitions: [
-                DFA.Transition(from: 0, matcher: .single("a")): 1,
-                DFA.Transition(from: 1, matcher: .single("a")): 2,
-                DFA.Transition(from: 1, matcher: .single("b")): 3,
-                DFA.Transition(from: 1, matcher: .single("c")): 4,
+                ScalarClass.single("a"): [(0, 1), (1, 2)],
+                ScalarClass.single("b"): [(1, 3)],
+                ScalarClass.single("c"): [(1, 4)],
                 ],
             initial: 0,
             accepting: [2: .aa, 3: .ab, 4: .ac],

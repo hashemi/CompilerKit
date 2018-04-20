@@ -1,17 +1,12 @@
 struct DFA<Output: Hashable, M: Matcher & Hashable> {
     typealias Element = M.Element
     
-    struct Transition: Hashable {
-        let from: Int
-        let matcher: M
-    }
-    
     var alphabet: Set<M> {
-        return Set(transitions.keys.map { $0.matcher })
+        return Set(transitions.keys)
     }
     
     let states: Int
-    let transitions: [Transition: Int]
+    let transitions: [M: [(Int, Int)]]
     let initial: Int
     let accepting: [Int: Output]
     let nonAcceptingValue: Output
@@ -23,7 +18,7 @@ struct DFA<Output: Hashable, M: Matcher & Hashable> {
                 return nonAcceptingValue
             }
             
-            guard let newState = transitions[Transition(from: state, matcher: matcher)] else {
+            guard let newState = transitions[matcher]?.first(where: { $0.0 == state })?.1 else {
                 return nonAcceptingValue
             }
             state = newState
@@ -49,7 +44,7 @@ extension DFA {
         let q0 = epsilonClosures[nfa.initial]
         var Q: [Set<Int>] = [q0]
         var worklist = [(0, q0)]
-        var transitions: [DFA<Set<NFAOutput>, M>.Transition: Int] = [:]
+        var transitions: [M: [(Int, Int)]] = [:]
         var accepting: [Int: Set<NFAOutput>] = [0: Set(q0.compactMap { nfa.accepting[$0] })]
         while let (qpos, q) = worklist.popLast() {
             for matcher in alphabet {
@@ -61,7 +56,7 @@ extension DFA {
                     worklist.append((position, t))
                     accepting[Q.count - 1] = Set(t.compactMap({ nfa.accepting[$0] }))
                 }
-                transitions[DFA<Set<NFAOutput>, M>.Transition(from: qpos, matcher: matcher)] = position
+                transitions[matcher, default: []].append((qpos, position))
             }
         }
         
@@ -86,14 +81,8 @@ extension DFA {
             }
         }
         
-        let transitions = Dictionary(uniqueKeysWithValues:
-            dfa.transitions.map { k,v in
-                (Transition(from: k.from, matcher: k.matcher), v)
-            }
-        )
-        
         self.states = dfa.states
-        self.transitions = transitions
+        self.transitions = dfa.transitions
         self.initial = dfa.initial
         self.accepting = accepting
         self.nonAcceptingValue = nonAcceptingValue
@@ -127,7 +116,7 @@ extension DFA {
                 for x in 0..<self.states {
                     let p = partition[x]
                     let target: Int
-                    if let nextState = self.transitions[Transition(from: x, matcher: matcher)] {
+                    if let nextState = self.transitions[matcher]?.first(where: { $0.0 == x })?.1 {
                         target = partition[nextState]
                     } else {
                         target = -2
@@ -161,9 +150,8 @@ extension DFA {
         let accepting = Dictionary(
             self.accepting.map { (partition[$0.key], $0.value) },
             uniquingKeysWith: { (first, _) in first })
-        let transitions = Dictionary(
-            self.transitions.map { transition, target in
-                (Transition(from: partition[transition.from], matcher: transition.matcher), partition[target]) }, uniquingKeysWith: { (first, _ ) in first })
+        
+        let transitions = self.transitions.mapValues { $0.map { (partition[$0.0], partition[$0.1]) } }
         
         return DFA(states: partitionCount, transitions: transitions, initial: initial, accepting: accepting, nonAcceptingValue: self.nonAcceptingValue)
     }
