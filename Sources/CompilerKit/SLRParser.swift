@@ -6,7 +6,7 @@ extension Grammar.Node: Matcher {
     }
 }
 
-struct LRParser<T: Hashable> {
+struct SLRParser<T: Hashable> {
     struct Item: Hashable {
         let term: Int
         let production: Int
@@ -14,21 +14,24 @@ struct LRParser<T: Hashable> {
     }
     
     enum Action: Hashable {
-        case reduce(Int, Int)
         case shift
+        case reduce(Int, Int, Set<T>)
         case accept
         case error
     }
     
     typealias Node = Grammar<T>.Node<T>
     
-    let grammar: Grammar<T>
     let dfa: DFA<Set<Action>, Node>
     
     init(_ g: Grammar<T>) {
-        grammar = g.augmented
+        let grammar = g.augmented
         
         // construct the LR(0) state machine
+        let nullable = grammar.nullable()
+        let first = grammar.first(nullable: nullable)
+        let follow = grammar.follow(nullable: nullable, first: first)
+        
         var items: [Item] = []
         var transitions: [Node: [(Int, Int)]] = [:]
         var accepting: [Int: Action] = [:]
@@ -60,7 +63,7 @@ struct LRParser<T: Hashable> {
                 items.append(Item(term: s, production: p, position: prods[s][p].count))
                 
                 // production completed means we can reduce
-                accepting[items.count - 1] = .reduce(s, p)
+                accepting[items.count - 1] = .reduce(s, prods[s][p].count, follow[s])
             }
         }
         
@@ -90,9 +93,6 @@ struct LRParser<T: Hashable> {
     func parse<S: Sequence>(_ elements: S) -> Bool where S.Element == T {
         var stack: [Node] = []
         var it = elements.makeIterator()
-        let nullable = grammar.nullable()
-        let first = grammar.first(nullable: nullable)
-        let follow = grammar.follow(nullable: nullable, first: first)
         
         var lookahead = it.next()
         func advance() -> T? {
@@ -106,9 +106,9 @@ struct LRParser<T: Hashable> {
             case .shift:
                 guard let t = advance() else { return false }
                 stack.append(.t(t))
-            case let .reduce(s, p):
-                stack.removeLast(grammar.productions[s][p].count)
-                stack.append(.nt(s))
+            case let .reduce(nt, size, _):
+                stack.removeLast(size)
+                stack.append(.nt(nt))
             case .accept:
                 guard lookahead == nil else { return false }
             case .error:
@@ -129,9 +129,11 @@ struct LRParser<T: Hashable> {
                 // we have a reduce/reduce or shift/reduce conflict
                 // is there any viable reduce among the possible actions?
                 let viableReduce = actions.first { action in
-                    if case let .reduce(s, _) = action {
-                        if lookahead == nil { return true }
-                        return follow[s].contains(lookahead!)
+                    if case let .reduce(_, _, la) = action {
+                        if let lookahead = lookahead {
+                            return la.contains(lookahead)
+                        }
+                        return true
                     }
                     return false
                 }

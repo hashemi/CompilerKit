@@ -133,12 +133,12 @@ final class GrammarTests: XCTestCase {
     
     func testLRConstruction() {
         let g = GrammarTests.grammar
-        _ = LRParser(g)
+        _ = SLRParser(g)
     }
 
     func testLRParserCorrectness() {
         let g = GrammarTests.grammar
-        let parser = LRParser(g)
+        let parser = SLRParser(g)
 
         for s in GrammarTests.valid {
             XCTAssert(parser.parse(s))
