@@ -133,12 +133,12 @@ final class GrammarTests: XCTestCase {
     
     func testLRConstruction() {
         let g = GrammarTests.grammar
-        _ = SLRParser(g)
+        _ = LRParser(slr: g)
     }
 
     func testLRParserCorrectness() {
         let g = GrammarTests.grammar
-        let parser = SLRParser(g)
+        let parser = LRParser(slr: g)
 
         for s in GrammarTests.valid {
             XCTAssert(parser.parse(s))
@@ -151,7 +151,7 @@ final class GrammarTests: XCTestCase {
 
     func testLALRParserCorrectness() {
         let g = GrammarTests.grammar
-        let parser = LALRParser(g)
+        let parser = LRParser(lalr: g)
         
         for s in GrammarTests.valid {
             XCTAssert(parser.parse(s))
@@ -230,19 +230,19 @@ final class GrammarTests: XCTestCase {
             case lb, rb, id, plus, mult
         }
         
-        func constructItemSet(_ s: [(Int, Int, Int)]) -> Set<LALRParser<Token>.Item> {
-            return Set(s.map(LALRParser<Token>.Item.init))
+        func constructItemSet(_ s: [(Int, Int, Int)]) -> Set<LRParser<Token>.Item> {
+            return Set(s.map(LRParser<Token>.Item.init))
         }
         
-        func constructItemSets(_ s: [[(Int, Int, Int)]]) -> Set<Set<LALRParser<Token>.Item>> {
+        func constructItemSets(_ s: [[(Int, Int, Int)]]) -> Set<Set<LRParser<Token>.Item>> {
             return Set(s.map(constructItemSet))
         }
         
-        func constructTransition(_ s: Set<LALRParser<Token>.Item>, _ nt: Int) -> LALRParser<Token>.Transition {
-            return LALRParser<Token>.Transition(state: s, nt: nt)
+        func constructTransition(_ s: Set<LRParser<Token>.Item>, _ nt: Int) -> LRParser<Token>.Transition {
+            return LRParser<Token>.Transition(state: s, nt: nt)
         }
         
-        func constructTransitionSet(_ s: [(Set<LALRParser<Token>.Item>, Int)]) -> Set<LALRParser<Token>.Transition> {
+        func constructTransitionSet(_ s: [(Set<LRParser<Token>.Item>, Int)]) -> Set<LRParser<Token>.Transition> {
             return Set(s.map(constructTransition))
         }
         
@@ -286,18 +286,18 @@ final class GrammarTests: XCTestCase {
         let nullable = grammar.nullable()
         
         // The LR(0) item sets or "canonical set of LR(0) items"
-        let startItem = LALRParser<Token>.Item(term: grammar.productions.count - 1, production: 0, position: 0)
-        let itemSets = LALRParser.itemSets(grammar, startItem, allNodes)
+        let startItem = LRParser<Token>.Item(term: grammar.productions.count - 1, production: 0, position: 0)
+        let itemSets = LRParser.itemSets(grammar, startItem, allNodes)
         let expectedItemSets = Set(I)
         XCTAssertEqual(itemSets, expectedItemSets)
         
         // goto from state I1 {[E' -> E.], [E -> E. + T]} by token '+'...
-        let gotoSet = LALRParser.goto(grammar, I[1], .t(.plus))
+        let gotoSet = LRParser.goto(grammar, I[1], .t(.plus))
         
         // ...and expect to land in state I6
         XCTAssertEqual(gotoSet, I[6])
         
-        let allTransitions = LALRParser.allTransitions(grammar, itemSets)
+        let allTransitions = LRParser.allTransitions(grammar, itemSets)
         let expectedTransitions = constructTransitionSet([
             (I[0], 0), (I[0], 1), (I[0], 2),
             (I[4], 0), (I[4], 1), (I[4], 2),
@@ -311,18 +311,18 @@ final class GrammarTests: XCTestCase {
         // this is a transition (I4, E) - with state I4, nonterminal E.
         // This transition lands us in state I8 {[F -> ( E .)], [E -> E .+ T]}
         let t = constructTransition(I[4], 0)
-        let drTerminals = LALRParser.directRead(grammar, t)
+        let drTerminals = LRParser.directRead(grammar, t)
         XCTAssertEqual(drTerminals, [.plus, .rb])
         
-        let reads = Dictionary(allTransitions) { LALRParser.reads(grammar, nullable, $0) }
-        let directRead = Dictionary(allTransitions) { LALRParser.directRead(grammar, $0) }
-        let indirectReads = LALRParser<Token>.digraph(allTransitions, reads, directRead)
+        let reads = Dictionary(allTransitions) { LRParser.reads(grammar, nullable, $0) }
+        let directRead = Dictionary(allTransitions) { LRParser.directRead(grammar, $0) }
+        let indirectReads = LRParser<Token>.digraph(allTransitions, reads, directRead)
 
         // Without nullable terms, the 'reads' relationship is identical to direct read
         // TODO: test this with a grammar that has nullable rules
         XCTAssertEqual(directRead, indirectReads)
         
-        let expectedFollowSets: [LALRParser<Token>.Transition: Set<Token>] = [
+        let expectedFollowSets: [LRParser<Token>.Transition: Set<Token>] = [
             constructTransition(I[0], 0): [.plus],
             constructTransition(I[0], 1): [.mult, .plus],
             constructTransition(I[0], 2): [.mult, .plus],
@@ -333,24 +333,24 @@ final class GrammarTests: XCTestCase {
             constructTransition(I[6], 2): [.mult, .plus, .rb],
             constructTransition(I[7], 2): [.mult, .plus, .rb],
         ]
-        let includes = Dictionary(allTransitions) { LALRParser.includes(grammar, nullable, $0, allTransitions) }
-        let followSets = LALRParser<Token>.digraph(allTransitions, includes, indirectReads)
+        let includes = Dictionary(allTransitions) { LRParser.includes(grammar, nullable, $0, allTransitions) }
+        let followSets = LRParser<Token>.digraph(allTransitions, includes, indirectReads)
         XCTAssertEqual(expectedFollowSets, followSets)
         
         // make a list of all possible reduction items: [A -> w.]
-        var reductions: [(Set<LALRParser<Token>.Item>, LALRParser<Token>.Item)] = []
+        var reductions: [(Set<LRParser<Token>.Item>, LRParser<Token>.Item)] = []
         let prods = grammar.productions
         for term in 0..<prods.count {
             for production in 0..<prods[term].count {
-                let r = LALRParser<Token>.Item(term: term, production: production, position: prods[term][production].count)
+                let r = LRParser<Token>.Item(term: term, production: production, position: prods[term][production].count)
                 for state in itemSets where state.contains(r) {
                     reductions.append((state, r))
                 }
             }
         }
 
-        let lookbacks = reductions.map { LALRParser<Token>.lookback(grammar, $0.0, $0.1, allTransitions) }
-        let expectedLookbacks: [Set<LALRParser<Token>.Transition>] = [
+        let lookbacks = reductions.map { LRParser<Token>.lookback(grammar, $0.0, $0.1, allTransitions) }
+        let expectedLookbacks: [Set<LRParser<Token>.Transition>] = [
             constructTransitionSet([(I[4], 0), (I[0], 0)]),
             constructTransitionSet([(I[4], 0), (I[0], 0)]),
             constructTransitionSet([(I[6], 1), (I[4], 1), (I[0], 1)]),
@@ -364,7 +364,7 @@ final class GrammarTests: XCTestCase {
 
         let lookaheads: [Set<Token>] = reductions.map { state, reduction in
             var la: Set<Token> = []
-            for transition in LALRParser.lookback(grammar, state, reduction, allTransitions) {
+            for transition in LRParser.lookback(grammar, state, reduction, allTransitions) {
                 la.formUnion(followSets[transition]!)
             }
             return la

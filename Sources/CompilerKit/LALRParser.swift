@@ -1,41 +1,108 @@
 private extension Grammar {
-    subscript(_ item: LALRParser<T>.Item) -> Node<T>? {
+    subscript(_ item: LRParser<T>.Item) -> Node<T>? {
         let prod = productions[item.term][item.production]
         guard item.position < prod.count else { return nil }
         return prod[item.position]
     }
 }
 
-struct LALRParser<T: Hashable> {
-    typealias Node = Grammar<T>.Node<T>
-    
-    struct Item: Hashable {
-        let term: Int
-        let production: Int
-        let position: Int
+extension LRParser {
+    init(lalr g: Grammar<T>) {
+        let grammar = g.augmented
         
-        var next: Item {
-            return Item(term: term, production: production, position: position + 1)
+        let startItem = Item(term: grammar.productions.count - 1, production: 0, position: 0)
+        let allNodes = Set(grammar.productions.flatMap { $0.flatMap { $0 } })
+        let nullable = grammar.nullable()
+        let itemSets = LRParser.itemSets(grammar, startItem, allNodes)
+        let allTransitions = LRParser.allTransitions(grammar, itemSets)
+        
+        let directRead = Dictionary(allTransitions) { LRParser.directRead(grammar, $0) }
+        
+        let transitionReads = Dictionary(allTransitions) { LRParser.reads(grammar, nullable, $0) }
+        
+        let reads = LRParser.digraph(allTransitions, transitionReads, directRead)
+        
+        let transitionIncludes = Dictionary(allTransitions) { LRParser.includes(grammar, nullable, $0, allTransitions) }
+        
+        let follow = LRParser.digraph(allTransitions, transitionIncludes, reads)
+        
+        // make a list of all possible reduction items: [A -> w.]
+        var reductions: [(Set<Item>, Item)] = []
+        let prods = grammar.productions
+        for term in 0..<prods.count {
+            for production in 0..<prods[term].count {
+                let r = Item(term: term, production: production, position: prods[term][production].count)
+                for state in itemSets where state.contains(r) {
+                    reductions.append((state, r))
+                }
+            }
         }
-    }
-    
-    // (p, A) where p is state and A is nt
-    struct Transition: Hashable {
-        let state: Set<Item>
-        let nt: Int
-    }
-    
-    enum Action: Hashable {
-        case shift
-        case reduce(Int, Int, Set<T>)
-        case accept
-        case error
-    }
-    
-    let dfa: DFA<Set<LALRParser.Action>, Node>
-    
-    init(_ grammar: Grammar<T>) {
-        self.dfa = LALRParser.constructDfa(grammar)
+        
+        var lookbacks: [Set<Item>: [Item: Set<Transition>]] = [:]
+        for (state, reduction) in reductions {
+            lookbacks[state, default: [:]][reduction, default: []] = LRParser.lookback(grammar, state, reduction, allTransitions)
+        }
+        
+        var lookaheads: [Set<Item>: [Item: Set<T>]] = [:]
+        for (state, reduction) in reductions {
+            lookaheads[state] = [reduction: []]
+            for transition in lookbacks[state]![reduction]! {
+                lookaheads[state]![reduction]!.formUnion(follow[transition]!)
+            }
+        }
+        
+        // now we (very inefficiently) build a DFA out of that
+        let orderedItemSets = Array(itemSets)
+        func state(for itemSet: Set<Item>) -> Int {
+            return orderedItemSets.index(of: itemSet)!
+        }
+        
+        let startState = state(for: LRParser.closure(grammar, [startItem]))
+        let finalState = state(for: [Item(term: grammar.productions.count - 1, production: 0, position: 1)])
+        
+        var transitions: [Node: [(Int, Int)]] = [:]
+        for from in itemSets {
+            for x in allNodes {
+                let to = LRParser.goto(grammar, from, x)
+                if !to.isEmpty {
+                    transitions[x, default: []].append((state(for: from), state(for: to)))
+                }
+            }
+        }
+        
+        var accepting: [Int: Set<Action>] = [:]
+        for itemSet in itemSets {
+            let s = state(for: itemSet)
+            
+            // if this is a final state, accept, cannot do anything else
+            if s == finalState {
+                accepting[s] = [.accept]
+                continue
+            }
+            
+            if let possibleReductions = lookaheads[itemSet] {
+                for (reduction, allowedLookaheads) in possibleReductions {
+                    accepting[s, default: []].insert(.reduce(reduction.term, reduction.position, allowedLookaheads))
+                }
+                
+                // the item set also includes non-reduce items, so it can also shift
+                if itemSet.count > possibleReductions.count {
+                    accepting[s, default: []].insert(.shift)
+                }
+            } else {
+                // no reductions, so the only possible action here is to shift
+                accepting[s] = [.shift]
+            }
+        }
+        
+        // "we have a parser."
+        dfa = DFA(
+            states: itemSets.count,
+            transitions: transitions,
+            initial: startState,
+            accepting: accepting,
+            nonAcceptingValue: [Action.error]
+            ).minimized
     }
     
     static func closure(_ grammar: Grammar<T>, _ I: Set<Item>) -> Set<Item> {
@@ -208,169 +275,6 @@ struct LALRParser<T: Hashable> {
         }
         
         return lookback
-    }
-    
-    static func constructDfa(_ g: Grammar<T>) -> DFA<Set<Action>, Node> {
-        let grammar = g.augmented
-        
-        let startItem = Item(term: grammar.productions.count - 1, production: 0, position: 0)
-        let allNodes = Set(grammar.productions.flatMap { $0.flatMap { $0 } })
-        let nullable = grammar.nullable()
-        let itemSets = LALRParser.itemSets(grammar, startItem, allNodes)
-        let allTransitions = LALRParser.allTransitions(grammar, itemSets)
-        
-        let directRead = Dictionary(allTransitions) { LALRParser.directRead(grammar, $0) }
-
-        let transitionReads = Dictionary(allTransitions) { LALRParser.reads(grammar, nullable, $0) }
-        
-        let reads = LALRParser.digraph(allTransitions, transitionReads, directRead)
-        
-        let transitionIncludes = Dictionary(allTransitions) { LALRParser.includes(grammar, nullable, $0, allTransitions) }
-        
-        let follow = LALRParser.digraph(allTransitions, transitionIncludes, reads)
-        
-        // make a list of all possible reduction items: [A -> w.]
-        var reductions: [(Set<Item>, Item)] = []
-        let prods = grammar.productions
-        for term in 0..<prods.count {
-            for production in 0..<prods[term].count {
-                let r = Item(term: term, production: production, position: prods[term][production].count)
-                for state in itemSets where state.contains(r) {
-                    reductions.append((state, r))
-                }
-            }
-        }
-        
-        var lookbacks: [Set<Item>: [Item: Set<Transition>]] = [:]
-        for (state, reduction) in reductions {
-            lookbacks[state, default: [:]][reduction, default: []] = LALRParser.lookback(grammar, state, reduction, allTransitions)
-        }
-        
-        var lookaheads: [Set<Item>: [Item: Set<T>]] = [:]
-        for (state, reduction) in reductions {
-            lookaheads[state] = [reduction: []]
-            for transition in lookbacks[state]![reduction]! {
-                lookaheads[state]![reduction]!.formUnion(follow[transition]!)
-            }
-        }
-        
-        // now we (very inefficiently) build a DFA out of that
-        let orderedItemSets = Array(itemSets)
-        func state(for itemSet: Set<Item>) -> Int {
-            return orderedItemSets.index(of: itemSet)!
-        }
-        
-        let startState = state(for: LALRParser.closure(grammar, [startItem]))
-        let finalState = state(for: [Item(term: grammar.productions.count - 1, production: 0, position: 1)])
-        
-        var transitions: [Node: [(Int, Int)]] = [:]
-        for from in itemSets {
-            for x in allNodes {
-                let to = LALRParser.goto(grammar, from, x)
-                if !to.isEmpty {
-                    transitions[x, default: []].append((state(for: from), state(for: to)))
-                }
-            }
-        }
-        
-        var accepting: [Int: Set<Action>] = [:]
-        for itemSet in itemSets {
-            let s = state(for: itemSet)
-            
-            // if this is a final state, accept, cannot do anything else
-            if s == finalState {
-                accepting[s] = [.accept]
-                continue
-            }
-            
-            if let possibleReductions = lookaheads[itemSet] {
-                for (reduction, allowedLookaheads) in possibleReductions {
-                    accepting[s, default: []].insert(.reduce(reduction.term, reduction.position, allowedLookaheads))
-                }
-                
-                // the item set also includes non-reduce items, so it can also shift
-                if itemSet.count > possibleReductions.count {
-                    accepting[s, default: []].insert(.shift)
-                }
-            } else {
-                // no reductions, so the only possible action here is to shift
-                accepting[s] = [.shift]
-            }
-        }
-        
-        // "we have a parser."
-        return DFA(
-            states: itemSets.count,
-            transitions: transitions,
-            initial: startState,
-            accepting: accepting,
-            nonAcceptingValue: [Action.error]
-        ).minimized
-    }
-    
-    func parse<S: Sequence>(_ elements: S) -> Bool where S.Element == T {
-        var stack: [Node] = []
-        var it = elements.makeIterator()
-        
-        var lookahead = it.next()
-        func advance() -> T? {
-            let current = lookahead
-            lookahead = it.next()
-            return current
-        }
-        
-        func perform(_ action: Action) -> Bool {
-            switch action {
-            case .shift:
-                guard let t = advance() else { return false }
-                stack.append(.t(t))
-            case let .reduce(nt, size, _):
-                stack.removeLast(size)
-                stack.append(.nt(nt))
-            case .accept:
-                guard lookahead == nil else { return false }
-            case .error:
-                return false
-            }
-            
-            return true
-        }
-        
-        while true {
-            let actions = dfa.match(stack)
-            let action: Action
-            
-            switch actions.count {
-            case 0: action = .error
-            case 1: action = actions.first!
-            default:
-                // we have a reduce/reduce or shift/reduce conflict
-                // is there any viable reduce among the possible actions?
-                let viableReduce = actions.first { action in
-                    if case let .reduce(_, _, la) = action {
-                        if let lookahead = lookahead {
-                            return la.contains(lookahead)
-                        }
-                        return true
-                    }
-                    return false
-                }
-                
-                if let reduce = viableReduce {
-                    action = reduce
-                } else if actions.contains(.shift) {
-                    action = .shift
-                } else {
-                    action = .error
-                }
-            }
-            
-            if perform(action) {
-                if action == .accept { return true }
-            } else {
-                return false
-            }
-        }
     }
     
     static func digraph<Input: Hashable, Output: Hashable>(
