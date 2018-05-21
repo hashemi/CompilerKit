@@ -14,6 +14,7 @@ Since this project is under active development, it's very likely that the follow
 - Regular expression (`RegularExpression`).
 - Nondeterministic finite automata (`NFA`).
 - Deterministic finite automata (`DFA`).
+- Tokenizer (`Tokenizer`).
 - Grammar (`Grammar`).
 - LL parser (`LLParser`).
 - SLR parser (`LRParser`).
@@ -27,6 +28,7 @@ Since this project is under active development, it's very likely that the follow
 - Minimize a `DFA`.
 - Match a string against an `NFA` or `DFA` (i.e., execute finite state machine).
 - Create a matcher that takes pairs of `RegularExpression`s and tokens and returns the correct token for a string based on match.
+- Create a tokenizer from pairs of `RegularExpression`s and tokens as well as a `RegularExpression` representing trivia between tokens that then takes a string and breaks it into individual tokens, skipping the trivia in between them.
 - Eliminate left recursion from a grammar.
 - Perform left refactoring to eliminate backtracking.
 - Check if a grammar is backtracking-free.
@@ -61,7 +63,7 @@ Since this project is under active development, it's very likely that the follow
     minimizedDfa.match("1xy")      // .unknown
 ```
 
-See the tests for more usage examples.
+See the test suite for more usage examples.
 
 ## See Also
 

@@ -25,6 +25,28 @@ struct DFA<Output: Hashable, M: Matcher & Hashable> {
         }
         return accepting[state] ?? nonAcceptingValue
     }
+    
+    func prefixMatch<C: Collection>(_ elements: C) -> (Output, C.SubSequence) where C.Element == Element {
+        var state = initial
+        var result = (nonAcceptingValue, elements.prefix(upTo: elements.startIndex))
+        
+        for idx in elements.indices {
+            let element = elements[idx]
+            guard let matcher = alphabet.first(where: { $0 ~= element }) else {
+                break
+            }
+            
+            guard let newState = transitions[matcher]?.first(where: { $0.0 == state })?.1 else {
+                break
+            }
+            state = newState
+            if let newOutput = accepting[state] {
+                result = (newOutput, elements.prefix(through: idx))
+            }
+        }
+        
+        return result
+    }
 }
 
 extension DFA {

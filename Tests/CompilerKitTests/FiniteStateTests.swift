@@ -147,5 +147,46 @@ final class FiniteStateTests: XCTestCase {
             XCTAssertEqual(dfa.match("x1".unicodeScalars), [.identifier])
             XCTAssertEqual(dfa.match("1xy".unicodeScalars), [])
         }
+        
+        let dfa = NFA<Token, ScalarClass>(scanner: scanner).dfa.minimized
+        let source = "134 x3".unicodeScalars
+        var offset = source.startIndex
+        
+        while offset < source.endIndex {
+            let (token, match) = dfa.prefixMatch(source[offset...])
+            
+            if token.isEmpty {
+                // no match, skip over character
+                print("Skipping: '\(source[offset])'")
+                offset = source.index(after: offset)
+            } else {
+                offset = match.endIndex
+                print(token.first!, String(match))
+            }
+        }
+    }
+    
+    func testTokenizer() {
+        enum Token {
+            case integer
+            case decimal
+            case identifier
+            case unknown
+        }
+        
+        let scanner: [(RegularExpression, Token)] = [
+            (.digit + .digit*, .integer),
+            (.digit + .digit* + "." + .digit + .digit*, .decimal),
+            (.alpha + .alphanum*, .identifier),
+            ]
+        
+        let trivia: RegularExpression = " " | "\t" | "\r" | "\n"
+        
+        let tokenizer = Tokenizer(tokens: scanner, trivia: trivia, unknown: .unknown)!
+        let tokens = tokenizer.tokenize("134 x3 !4x 41.4 ?ab".unicodeScalars)
+        
+        for (t, s) in tokens {
+            print("'\(String(s))' - \(t)")
+        }
     }
 }
